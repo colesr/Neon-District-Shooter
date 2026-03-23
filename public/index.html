@@ -239,6 +239,12 @@
       100% { opacity:0; transform:translateY(-20px); }
     }
     
+    @keyframes powerupPop {
+      0% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+      50% { transform: translate(-50%, -50%) scale(1.3); }
+      100% { opacity: 0; transform: translate(-50%, -80%) scale(0.8); }
+    }
+    
     /* Connection Status */
     #connection-status {
       position:absolute;
@@ -273,6 +279,10 @@
     <div class="hud-item">KILLS: <span id="kills-display">0</span></div>
     <div class="hud-item">SCORE: <span id="score-display">0</span></div>
     <div class="hud-item">POWER: <span id="power-display">1</span></div>
+    <div class="hud-item">XP: <span id="xp-display">0</span>/100</div>
+    <div class="hud-item">SHIELD: <span id="shield-display">0</span></div>
+    <div class="hud-item">ARMOR: <span id="armor-display">0</span></div>
+    <div class="hud-item">MULTISHOT: <span id="multishot-display">1</span>x</div>
   </div>
   
   <!-- Health Bar -->
@@ -386,11 +396,25 @@ function connectToServer(playerName) {
       document.getElementById('kills-display').textContent = me.kills;
       document.getElementById('score-display').textContent = me.score;
       document.getElementById('power-display').textContent = me.powerLevel;
+      document.getElementById('xp-display').textContent = me.xp || 0;
+      document.getElementById('shield-display').textContent = Math.floor(me.shield || 0);
+      document.getElementById('armor-display').textContent = me.armor || 0;
+      document.getElementById('multishot-display').textContent = me.multishot || 1;
       
       // Update health bar
       const healthPct = (me.health / me.maxHealth) * 100;
       document.getElementById('health-bar-fill').style.width = healthPct + '%';
       document.getElementById('health-text').textContent = Math.floor(me.health) + ' / ' + me.maxHealth;
+      
+      // Change health bar color based on shield/invincibility
+      const fill = document.getElementById('health-bar-fill');
+      if (me.invincible > 0) {
+        fill.style.background = 'linear-gradient(90deg, #ffaa00, #ff6600)';
+      } else if (me.shield > 0) {
+        fill.style.background = 'linear-gradient(90deg, #00ccff, #0088ff)';
+      } else {
+        fill.style.background = 'linear-gradient(90deg, #00ffcc, #00ff88)';
+      }
       
       // Update camera
       cameraX = me.x;
@@ -413,6 +437,50 @@ function connectToServer(playerName) {
   socket.on('respawned', (data) => {
     document.getElementById('death-screen').classList.remove('show');
   });
+  
+  socket.on('powerup_collected', (data) => {
+    // Show notification
+    const powerupNames = {
+      'health_small': '+20 HEALTH',
+      'health_medium': '+40 HEALTH',
+      'health_large': '+75 HEALTH',
+      'energy': '+50 XP',
+      'shield': '+25 SHIELD',
+      'speed': '+SPEED',
+      'firerate': '+FIRE RATE',
+      'damage': '+DAMAGE',
+      'multishot': '+MULTISHOT',
+      'maxhealth': '+MAX HEALTH',
+      'triple_shot': 'TRIPLE SHOT!',
+      'rapid_fire': 'RAPID FIRE!',
+      'armor': '+ARMOR',
+      'invincibility': 'INVINCIBILITY!',
+      'mega_damage': 'MEGA DAMAGE!',
+      'nuke': '💥 NUKE!'
+    };
+    
+    const name = powerupNames[data.type] || 'POWERUP';
+    showPowerupNotification(name);
+  });
+}
+
+function showPowerupNotification(text) {
+  const notif = document.createElement('div');
+  notif.style.position = 'absolute';
+  notif.style.top = '50%';
+  notif.style.left = '50%';
+  notif.style.transform = 'translate(-50%, -50%)';
+  notif.style.color = '#00ffcc';
+  notif.style.fontSize = '24px';
+  notif.style.fontWeight = '900';
+  notif.style.textShadow = '0 0 20px #00ffcc';
+  notif.style.zIndex = '100';
+  notif.style.pointerEvents = 'none';
+  notif.textContent = text;
+  notif.style.animation = 'powerupPop 1s ease forwards';
+  document.body.appendChild(notif);
+  
+  setTimeout(() => notif.remove(), 1000);
 }
 
 // Input handling
@@ -483,20 +551,75 @@ function render() {
   
   // Draw powerups
   powerups.forEach(p => {
-    const colors = { health: '#ff0066', speed: '#00ffcc', damage: '#ffaa00' };
-    ctx.fillStyle = colors[p.type] || '#ffffff';
-    ctx.globalAlpha = 0.3;
+    // Color and size based on type/rarity
+    const powerupStyles = {
+      // Common (green)
+      'health_small': { color: '#00ff66', size: 12, glow: 15 },
+      'health_medium': { color: '#00ff88', size: 15, glow: 18 },
+      'energy': { color: '#00ffcc', size: 10, glow: 20 },
+      'shield': { color: '#00ccff', size: 14, glow: 18 },
+      'xp': { color: '#66ffcc', size: 11, glow: 16 },
+      
+      // Uncommon (blue/cyan)
+      'health_large': { color: '#00ff88', size: 20, glow: 25 },
+      'speed': { color: '#00ddff', size: 16, glow: 22 },
+      'firerate': { color: '#ff8800', size: 16, glow: 22 },
+      'damage': { color: '#ff6600', size: 16, glow: 22 },
+      'multishot': { color: '#ff00ff', size: 16, glow: 22 },
+      
+      // Rare (purple/gold)
+      'maxhealth': { color: '#ff00aa', size: 22, glow: 30 },
+      'triple_shot': { color: '#aa00ff', size: 22, glow: 30 },
+      'rapid_fire': { color: '#ffaa00', size: 22, glow: 30 },
+      'armor': { color: '#aaaaff', size: 22, glow: 30 },
+      
+      // Epic (orange/red - pulsing)
+      'invincibility': { color: '#ffaa00', size: 28, glow: 40 },
+      'mega_damage': { color: '#ff0066', size: 28, glow: 40 },
+      'nuke': { color: '#ff0000', size: 30, glow: 50 }
+    };
+    
+    const style = powerupStyles[p.type] || { color: '#ffffff', size: 15, glow: 20 };
+    
+    // Pulsing effect for epic items
+    const isEpic = ['invincibility', 'mega_damage', 'nuke'].includes(p.type);
+    const pulse = isEpic ? Math.sin(Date.now() / 200) * 0.3 + 1 : 1;
+    const actualSize = style.size * pulse;
+    
+    // Outer glow
+    ctx.fillStyle = style.color;
+    ctx.globalAlpha = 0.2;
     ctx.beginPath();
-    ctx.arc(p.x, p.y, 30, 0, Math.PI*2);
+    ctx.arc(p.x, p.y, actualSize * 2.5, 0, Math.PI*2);
     ctx.fill();
     ctx.globalAlpha = 1;
     
-    ctx.fillStyle = colors[p.type];
-    ctx.shadowColor = colors[p.type];
-    ctx.shadowBlur = 20;
+    // Main orb with glow
+    ctx.fillStyle = style.color;
+    ctx.shadowColor = style.color;
+    ctx.shadowBlur = style.glow * pulse;
     ctx.beginPath();
-    ctx.arc(p.x, p.y, 15, 0, Math.PI*2);
+    ctx.arc(p.x, p.y, actualSize, 0, Math.PI*2);
     ctx.fill();
+    
+    // Inner highlight
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.shadowBlur = 0;
+    ctx.beginPath();
+    ctx.arc(p.x - actualSize/3, p.y - actualSize/3, actualSize/3, 0, Math.PI*2);
+    ctx.fill();
+    
+    // Ring for rare+
+    if (style.size >= 22) {
+      ctx.strokeStyle = style.color;
+      ctx.lineWidth = 2;
+      ctx.shadowColor = style.color;
+      ctx.shadowBlur = style.glow;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, actualSize * 1.8, 0, Math.PI*2);
+      ctx.stroke();
+    }
+    
     ctx.shadowBlur = 0;
   });
   
@@ -516,8 +639,28 @@ function render() {
     if (!p.alive) return;
     
     const isMe = id === myPlayerId;
-    const color = isMe ? '#00ffcc' : '#ff2d78';
+    let color = isMe ? '#00ffcc' : '#ff2d78';
     const size = 20 + p.powerLevel * 2;
+    
+    // Visual effects for power states
+    if (p.invincible > 0) {
+      color = '#ffaa00'; // Orange for invincible
+    }
+    if (p.megaDamage > 0) {
+      color = '#ff0066'; // Red for mega damage
+    }
+    
+    // Shield visual
+    if (p.shield > 0) {
+      ctx.strokeStyle = '#00ccff';
+      ctx.lineWidth = 3;
+      ctx.shadowColor = '#00ccff';
+      ctx.shadowBlur = 20;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, size + 10, 0, Math.PI*2);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    }
     
     // Ship body
     ctx.save();
@@ -526,7 +669,7 @@ function render() {
     
     ctx.fillStyle = color;
     ctx.shadowColor = color;
-    ctx.shadowBlur = 20;
+    ctx.shadowBlur = 20 + (p.megaDamage > 0 ? 20 : 0);
     ctx.beginPath();
     ctx.moveTo(size, 0);
     ctx.lineTo(-size/2, -size/2);
@@ -553,6 +696,16 @@ function render() {
     const healthPct = p.health / p.maxHealth;
     ctx.fillStyle = healthPct > 0.5 ? '#00ffcc' : '#ff2d78';
     ctx.fillRect(p.x - barWidth/2, p.y - size - 25, barWidth * healthPct, barHeight);
+    
+    // Shield bar (if present)
+    if (p.shield > 0) {
+      const shieldBarY = p.y - size - 30;
+      ctx.fillStyle = 'rgba(0,204,255,0.3)';
+      ctx.fillRect(p.x - barWidth/2, shieldBarY, barWidth, 3);
+      const shieldPct = Math.min(1, p.shield / 50);
+      ctx.fillStyle = '#00ccff';
+      ctx.fillRect(p.x - barWidth/2, shieldBarY, barWidth * shieldPct, 3);
+    }
   });
   
   ctx.restore();
