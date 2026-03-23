@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NEON DISTRICT SHOOTER // MULTIPLAYER</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap');
+    
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { 
+      background:#04010a; 
+      overflow:hidden; 
+      font-family:'Orbitron',monospace;
+      color:#00ffcc;
+    }
+    
+    #game-canvas {
+      display:block;
+      background:#04010a;
+      image-rendering: crisp-edges;
+      image-rendering: pixelated;
+    }
+    
+    /* Join Screen */
+    #join-screen {
+      position:absolute;
+      inset:0;
+      background:rgba(4,1,10,0.98);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      flex-direction:column;
+      z-index:100;
+      backdrop-filter:blur(10px);
+    }
+    #join-screen.hidden { display:none; }
+    
+    .join-title {
+      font-size:48px;
+      font-weight:900;
+      color:#00ffcc;
+      text-shadow:0 0 40px #00ffcc;
+      letter-spacing:0.2em;
+      margin-bottom:20px;
+    }
+    .join-subtitle {
+      font-size:14px;
+      color:rgba(0,255,204,0.6);
+      letter-spacing:0.15em;
+      margin-bottom:40px;
+    }
+    #player-name-input {
+      font-family:'Orbitron',monospace;
+      font-size:18px;
+      padding:15px 30px;
+      background:rgba(0,255,204,0.1);
+      border:2px solid #00ffcc;
+      color:#00ffcc;
+      text-align:center;
+      letter-spacing:0.1em;
+      margin-bottom:20px;
+      width:300px;
+    }
+    #player-name-input::placeholder { color:rgba(0,255,204,0.3); }
+    #join-btn {
+      font-family:'Orbitron',monospace;
+      font-size:16px;
+      font-weight:700;
+      padding:15px 50px;
+      background:#00ffcc;
+      border:none;
+      color:#04010a;
+      cursor:pointer;
+      letter-spacing:0.15em;
+      transition:all 0.2s;
+    }
+    #join-btn:hover {
+      background:#00ffe6;
+      transform:scale(1.05);
+      box-shadow:0 0 30px rgba(0,255,204,0.5);
+    }
+    
+    /* HUD */
+    #hud {
+      position:absolute;
+      top:20px;
+      left:20px;
+      font-size:12px;
+      color:#00ffcc;
+      text-shadow:0 0 10px rgba(0,255,204,0.5);
+      letter-spacing:0.1em;
+      z-index:10;
+    }
+    .hud-item {
+      margin-bottom:8px;
+      background:rgba(4,1,10,0.7);
+      padding:8px 15px;
+      border-left:3px solid #00ffcc;
+    }
+    
+    /* Health Bar */
+    #health-bar-container {
+      position:absolute;
+      bottom:30px;
+      left:50%;
+      transform:translateX(-50%);
+      width:300px;
+      z-index:10;
+    }
+    #health-bar-bg {
+      width:100%;
+      height:25px;
+      background:rgba(4,1,10,0.8);
+      border:2px solid #00ffcc;
+      border-radius:3px;
+      overflow:hidden;
+    }
+    #health-bar-fill {
+      height:100%;
+      background:linear-gradient(90deg, #00ffcc, #00ff88);
+      transition:width 0.3s;
+      box-shadow:0 0 15px rgba(0,255,204,0.6);
+    }
+    #health-text {
+      position:absolute;
+      top:50%;
+      left:50%;
+      transform:translate(-50%, -50%);
+      font-size:12px;
+      font-weight:700;
+      color:#04010a;
+      mix-blend-mode:difference;
+      letter-spacing:0.1em;
+    }
+    
+    /* Leaderboard */
+    #leaderboard {
+      position:absolute;
+      top:20px;
+      right:20px;
+      width:250px;
+      background:rgba(4,1,10,0.85);
+      border:2px solid #00ffcc;
+      border-radius:5px;
+      padding:15px;
+      z-index:10;
+    }
+    .lb-title {
+      font-size:14px;
+      font-weight:900;
+      color:#00ffcc;
+      text-align:center;
+      margin-bottom:12px;
+      letter-spacing:0.15em;
+      text-shadow:0 0 15px rgba(0,255,204,0.7);
+    }
+    .lb-player {
+      display:flex;
+      justify-content:space-between;
+      font-size:11px;
+      padding:6px 0;
+      border-bottom:1px solid rgba(0,255,204,0.2);
+    }
+    .lb-player.me {
+      background:rgba(0,255,204,0.15);
+      padding:6px 8px;
+      margin:0 -8px;
+    }
+    .lb-rank { color:rgba(0,255,204,0.5); width:25px; }
+    .lb-name { flex:1; color:#00ffcc; }
+    .lb-score { color:#00ff88; font-weight:700; }
+    
+    /* Death Screen */
+    #death-screen {
+      position:absolute;
+      inset:0;
+      background:rgba(4,1,10,0.95);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      flex-direction:column;
+      z-index:50;
+    }
+    #death-screen.show { display:flex; }
+    .death-title {
+      font-size:42px;
+      font-weight:900;
+      color:#ff2d78;
+      text-shadow:0 0 40px #ff2d78;
+      letter-spacing:0.2em;
+      margin-bottom:20px;
+    }
+    .death-stats {
+      font-size:16px;
+      color:rgba(255,45,120,0.8);
+      margin-bottom:30px;
+    }
+    #respawn-btn {
+      font-family:'Orbitron',monospace;
+      font-size:16px;
+      font-weight:700;
+      padding:15px 50px;
+      background:#00ffcc;
+      border:none;
+      color:#04010a;
+      cursor:pointer;
+      letter-spacing:0.15em;
+      transition:all 0.2s;
+    }
+    #respawn-btn:hover {
+      background:#00ffe6;
+      transform:scale(1.05);
+    }
+    
+    /* Kill Feed */
+    #kill-feed {
+      position:absolute;
+      top:20px;
+      left:50%;
+      transform:translateX(-50%);
+      width:400px;
+      z-index:10;
+    }
+    .kill-msg {
+      background:rgba(4,1,10,0.85);
+      border:1px solid rgba(255,45,120,0.5);
+      padding:8px 15px;
+      margin-bottom:5px;
+      font-size:11px;
+      text-align:center;
+      color:#ff2d78;
+      letter-spacing:0.08em;
+      animation:killFade 3s ease forwards;
+    }
+    @keyframes killFade {
+      0% { opacity:1; transform:translateY(0); }
+      70% { opacity:1; }
+      100% { opacity:0; transform:translateY(-20px); }
+    }
+    
+    /* Connection Status */
+    #connection-status {
+      position:absolute;
+      bottom:20px;
+      right:20px;
+      font-size:10px;
+      padding:6px 12px;
+      background:rgba(4,1,10,0.8);
+      border:1px solid #00ffcc;
+      border-radius:3px;
+      z-index:10;
+    }
+    #connection-status.disconnected {
+      border-color:#ff2d78;
+      color:#ff2d78;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="game-canvas"></canvas>
+  
+  <!-- Join Screen -->
+  <div id="join-screen">
+    <div class="join-title">NEON DISTRICT</div>
+    <div class="join-subtitle">MULTIPLAYER ARENA // 2157</div>
+    <input type="text" id="player-name-input" placeholder="ENTER CALLSIGN" maxlength="15" />
+    <button id="join-btn">⚡ JOIN BATTLE</button>
+  </div>
+  
+  <!-- HUD -->
+  <div id="hud">
+    <div class="hud-item">KILLS: <span id="kills-display">0</span></div>
+    <div class="hud-item">SCORE: <span id="score-display">0</span></div>
+    <div class="hud-item">POWER: <span id="power-display">1</span></div>
+  </div>
+  
+  <!-- Health Bar -->
+  <div id="health-bar-container">
+    <div id="health-bar-bg">
+      <div id="health-bar-fill" style="width:100%"></div>
+    </div>
+    <div id="health-text">100 / 100</div>
+  </div>
+  
+  <!-- Leaderboard -->
+  <div id="leaderboard">
+    <div class="lb-title">🏆 TOP PLAYERS</div>
+    <div id="leaderboard-list"></div>
+  </div>
+  
+  <!-- Kill Feed -->
+  <div id="kill-feed"></div>
+  
+  <!-- Death Screen -->
+  <div id="death-screen">
+    <div class="death-title">ELIMINATED</div>
+    <div class="death-stats" id="death-stats-text"></div>
+    <button id="respawn-btn">⚡ RESPAWN</button>
+  </div>
+  
+  <!-- Connection Status -->
+  <div id="connection-status">● CONNECTED</div>
+  
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+// MULTIPLAYER CLIENT
+const canvas = document.getElementById('game-canvas');
+const ctx = canvas.getContext('2d');
+let W, H;
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// Game state
+let socket = null;
+let myPlayerId = null;
+let players = new Map();
+let bullets = new Map();
+let powerups = new Map();
+let worldSize = 10000;
+let cameraX = 0, cameraY = 0;
+
+// Input
+const keys = {};
+let mouseX = W/2, mouseY = H/2;
+let shooting = false;
+
+// Join game
+document.getElementById('join-btn').addEventListener('click', joinGame);
+document.getElementById('player-name-input').addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') joinGame();
+});
+
+function joinGame() {
+  const name = document.getElementById('player-name-input').value.trim() || 'Anonymous';
+  document.getElementById('join-screen').classList.add('hidden');
+  connectToServer(name);
+}
+
+function connectToServer(playerName) {
+  // Connect to server (change URL for production)
+  const serverUrl = window.location.hostname === 'localhost' 
+    ? 'http://localhost:3000' 
+    : window.location.origin;
+  
+  socket = io(serverUrl);
+  
+  socket.on('connect', () => {
+    console.log('Connected to server');
+    document.getElementById('connection-status').textContent = '● CONNECTED';
+    document.getElementById('connection-status').classList.remove('disconnected');
+    socket.emit('join', { name: playerName });
+  });
+  
+  socket.on('disconnect', () => {
+    console.log('Disconnected from server');
+    document.getElementById('connection-status').textContent = '● DISCONNECTED';
+    document.getElementById('connection-status').classList.add('disconnected');
+  });
+  
+  socket.on('init', (data) => {
+    myPlayerId = data.playerId;
+    worldSize = data.worldSize;
+    console.log('Initialized as player:', myPlayerId);
+  });
+  
+  socket.on('game_state', (data) => {
+    // Update game state
+    players.clear();
+    data.players.forEach(p => players.set(p.id, p));
+    
+    bullets.clear();
+    data.bullets.forEach(b => bullets.set(b.id, b));
+    
+    powerups.clear();
+    data.powerups.forEach(p => powerups.set(p.id, p));
+    
+    // Update HUD
+    const me = players.get(myPlayerId);
+    if (me) {
+      document.getElementById('kills-display').textContent = me.kills;
+      document.getElementById('score-display').textContent = me.score;
+      document.getElementById('power-display').textContent = me.powerLevel;
+      
+      // Update health bar
+      const healthPct = (me.health / me.maxHealth) * 100;
+      document.getElementById('health-bar-fill').style.width = healthPct + '%';
+      document.getElementById('health-text').textContent = Math.floor(me.health) + ' / ' + me.maxHealth;
+      
+      // Update camera
+      cameraX = me.x;
+      cameraY = me.y;
+    }
+    
+    // Update leaderboard
+    updateLeaderboard();
+  });
+  
+  socket.on('player_killed', (data) => {
+    addKillMessage(data);
+    
+    // Check if we died
+    if (data.killedId === myPlayerId) {
+      showDeathScreen(data.killerName);
+    }
+  });
+  
+  socket.on('respawned', (data) => {
+    document.getElementById('death-screen').classList.remove('show');
+  });
+}
+
+// Input handling
+window.addEventListener('keydown', (e) => {
+  keys[e.key.toLowerCase()] = true;
+});
+
+window.addEventListener('keyup', (e) => {
+  keys[e.key.toLowerCase()] = false;
+});
+
+canvas.addEventListener('mousemove', (e) => {
+  mouseX = e.clientX;
+  mouseY = e.clientY;
+});
+
+canvas.addEventListener('mousedown', () => {
+  shooting = true;
+});
+
+canvas.addEventListener('mouseup', () => {
+  shooting = false;
+});
+
+// Send input to server
+setInterval(() => {
+  if (!socket || !myPlayerId) return;
+  
+  // Calculate velocity from WASD
+  let vx = 0, vy = 0;
+  if (keys['w'] || keys['arrowup']) vy = -1;
+  if (keys['s'] || keys['arrowdown']) vy = 1;
+  if (keys['a'] || keys['arrowleft']) vx = -1;
+  if (keys['d'] || keys['arrowright']) vx = 1;
+  
+  // Normalize diagonal movement
+  if (vx !== 0 && vy !== 0) {
+    const len = Math.sqrt(vx*vx + vy*vy);
+    vx /= len;
+    vy /= len;
+  }
+  
+  // Calculate angle to mouse
+  const me = players.get(myPlayerId);
+  if (me) {
+    const worldMouseX = cameraX + (mouseX - W/2);
+    const worldMouseY = cameraY + (mouseY - H/2);
+    const angle = Math.atan2(worldMouseY - me.y, worldMouseX - me.x);
+    
+    socket.emit('input', { vx, vy, angle });
+    
+    if (shooting) {
+      socket.emit('shoot', { angle });
+    }
+  }
+}, 1000/60); // 60fps input
+
+// Render
+function render() {
+  ctx.fillStyle = '#04010a';
+  ctx.fillRect(0, 0, W, H);
+  
+  ctx.save();
+  ctx.translate(W/2 - cameraX, H/2 - cameraY);
+  
+  // Draw grid
+  drawGrid();
+  
+  // Draw powerups
+  powerups.forEach(p => {
+    const colors = { health: '#ff0066', speed: '#00ffcc', damage: '#ffaa00' };
+    ctx.fillStyle = colors[p.type] || '#ffffff';
+    ctx.globalAlpha = 0.3;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 30, 0, Math.PI*2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    
+    ctx.fillStyle = colors[p.type];
+    ctx.shadowColor = colors[p.type];
+    ctx.shadowBlur = 20;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 15, 0, Math.PI*2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  });
+  
+  // Draw bullets
+  bullets.forEach(b => {
+    ctx.fillStyle = '#00ffcc';
+    ctx.shadowColor = '#00ffcc';
+    ctx.shadowBlur = 15;
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, 4, 0, Math.PI*2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  });
+  
+  // Draw players
+  players.forEach((p, id) => {
+    if (!p.alive) return;
+    
+    const isMe = id === myPlayerId;
+    const color = isMe ? '#00ffcc' : '#ff2d78';
+    const size = 20 + p.powerLevel * 2;
+    
+    // Ship body
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(p.angle);
+    
+    ctx.fillStyle = color;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 20;
+    ctx.beginPath();
+    ctx.moveTo(size, 0);
+    ctx.lineTo(-size/2, -size/2);
+    ctx.lineTo(-size/3, 0);
+    ctx.lineTo(-size/2, size/2);
+    ctx.closePath();
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    
+    ctx.restore();
+    
+    // Name tag
+    ctx.fillStyle = color;
+    ctx.font = '11px Orbitron';
+    ctx.textAlign = 'center';
+    ctx.fillText(p.name, p.x, p.y - size - 10);
+    
+    // Health bar
+    const barWidth = 50;
+    const barHeight = 5;
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(p.x - barWidth/2, p.y - size - 25, barWidth, barHeight);
+    
+    const healthPct = p.health / p.maxHealth;
+    ctx.fillStyle = healthPct > 0.5 ? '#00ffcc' : '#ff2d78';
+    ctx.fillRect(p.x - barWidth/2, p.y - size - 25, barWidth * healthPct, barHeight);
+  });
+  
+  ctx.restore();
+  
+  requestAnimationFrame(render);
+}
+
+function drawGrid() {
+  const gridSize = 100;
+  const startX = Math.floor((cameraX - W/2) / gridSize) * gridSize;
+  const startY = Math.floor((cameraY - H/2) / gridSize) * gridSize;
+  const endX = cameraX + W/2;
+  const endY = cameraY + H/2;
+  
+  ctx.strokeStyle = 'rgba(0,255,204,0.05)';
+  ctx.lineWidth = 1;
+  
+  for (let x = startX; x < endX; x += gridSize) {
+    ctx.beginPath();
+    ctx.moveTo(x, startY);
+    ctx.lineTo(x, endY);
+    ctx.stroke();
+  }
+  
+  for (let y = startY; y < endY; y += gridSize) {
+    ctx.beginPath();
+    ctx.moveTo(startX, y);
+    ctx.lineTo(endX, y);
+    ctx.stroke();
+  }
+}
+
+function updateLeaderboard() {
+  const sorted = Array.from(players.values())
+    .filter(p => p.alive)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 10);
+  
+  const html = sorted.map((p, i) => {
+    const isMe = p.id === myPlayerId;
+    return `<div class="lb-player${isMe?' me':''}">
+      <span class="lb-rank">#${i+1}</span>
+      <span class="lb-name">${p.name}</span>
+      <span class="lb-score">${p.score}</span>
+    </div>`;
+  }).join('');
+  
+  document.getElementById('leaderboard-list').innerHTML = html;
+}
+
+function addKillMessage(data) {
+  const msg = document.createElement('div');
+  msg.className = 'kill-msg';
+  msg.textContent = `${data.killerName} eliminated a player`;
+  document.getElementById('kill-feed').appendChild(msg);
+  
+  setTimeout(() => msg.remove(), 3000);
+}
+
+function showDeathScreen(killerName) {
+  const me = players.get(myPlayerId);
+  if (!me) return;
+  
+  document.getElementById('death-stats-text').textContent = 
+    `Eliminated by ${killerName} // Score: ${me.score} // Kills: ${me.kills}`;
+  document.getElementById('death-screen').classList.add('show');
+}
+
+document.getElementById('respawn-btn').addEventListener('click', () => {
+  if (socket) {
+    socket.emit('respawn');
+  }
+});
+
+// Start render loop
+render();
+  </script>
+</body>
+</html>
