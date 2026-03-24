@@ -245,31 +245,6 @@
       100% { opacity: 0; transform: translate(-50%, -80%) scale(0.8); }
     }
     
-    @keyframes streakPulse {
-      0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.2); }
-    }
-    
-    @keyframes levelUpAnim {
-      0% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-      50% { transform: translate(-50%, -50%) scale(1.5); }
-      100% { opacity: 0; transform: translate(-50%, -100%) scale(0.5); }
-    }
-    
-    @keyframes missionComplete {
-      0% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
-      10% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
-      90% { opacity: 1; }
-      100% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
-    }
-    
-    @keyframes nukeBlast {
-      0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
-      20% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
-      80% { opacity: 1; }
-      100% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
-    }
-    
     /* Connection Status */
     #connection-status {
       position:absolute;
@@ -308,9 +283,6 @@
     <div class="hud-item">SHIELD: <span id="shield-display">0</span></div>
     <div class="hud-item">ARMOR: <span id="armor-display">0</span></div>
     <div class="hud-item">MULTISHOT: <span id="multishot-display">1</span>x</div>
-    <div class="hud-item" id="killstreak-hud" style="display:none; border-left-color:#ff6600; background:rgba(255,102,0,0.1);">
-      🔥 STREAK: <span id="killstreak-display">0</span>
-    </div>
   </div>
   
   <!-- Health Bar -->
@@ -335,45 +307,6 @@
     <div class="death-title">ELIMINATED</div>
     <div class="death-stats" id="death-stats-text"></div>
     <button id="respawn-btn">⚡ RESPAWN</button>
-  </div>
-  
-  <!-- Kill Streak Announcement -->
-  <div id="kill-streak-announcement" style="display:none; position:absolute; top:30%; left:50%; transform:translate(-50%, -50%); z-index:200; text-align:center;">
-    <div id="streak-title" style="font-size:64px; font-weight:900; text-shadow:0 0 60px currentColor; letter-spacing:0.2em; animation:streakPulse 0.5s ease;"></div>
-    <div id="streak-subtitle" style="font-size:24px; margin-top:15px; opacity:0.8;"></div>
-  </div>
-  
-  <!-- Account Level Display -->
-  <div id="account-level" style="position:absolute; top:20px; left:50%; transform:translateX(-50%); background:rgba(4,1,10,0.9); padding:10px 25px; border:2px solid #00ffcc; border-radius:5px; z-index:10;">
-    <div style="font-size:11px; color:rgba(0,255,204,0.6); text-align:center; letter-spacing:0.1em;">ACCOUNT LEVEL</div>
-    <div style="font-size:24px; font-weight:900; color:#00ffcc; text-align:center; text-shadow:0 0 20px #00ffcc;" id="account-level-num">1</div>
-    <div id="account-xp-bar" style="width:200px; height:6px; background:rgba(0,255,204,0.2); margin-top:5px; border-radius:3px; overflow:hidden;">
-      <div id="account-xp-fill" style="width:0%; height:100%; background:linear-gradient(90deg, #00ffcc, #00ff88); transition:width 0.3s;"></div>
-    </div>
-    <div style="font-size:9px; color:rgba(0,255,204,0.5); text-align:center; margin-top:3px;" id="account-xp-text">0 / 1000 XP</div>
-  </div>
-  
-  <!-- Daily Missions Panel -->
-  <div id="missions-panel" style="position:absolute; bottom:120px; left:20px; width:300px; background:rgba(4,1,10,0.9); border:2px solid #00ffcc; border-radius:5px; padding:15px; z-index:10;">
-    <div style="font-size:14px; font-weight:900; color:#00ffcc; margin-bottom:12px; text-shadow:0 0 15px #00ffcc; letter-spacing:0.1em;">📋 DAILY MISSIONS</div>
-    <div id="missions-list"></div>
-    <div style="font-size:9px; color:rgba(0,255,204,0.5); margin-top:10px; text-align:center;" id="missions-reset">Resets in: 23:59:59</div>
-  </div>
-  
-  <!-- Skin Selector Button -->
-  <div id="skin-btn" onclick="toggleSkinSelector()" style="position:absolute; bottom:20px; left:20px; padding:12px 20px; background:#00ffcc; color:#04010a; font-weight:700; font-size:12px; cursor:pointer; letter-spacing:0.1em; transition:all 0.2s; border-radius:3px;">
-    🎨 SKINS
-  </div>
-  
-  <!-- Skin Selector Modal -->
-  <div id="skin-modal" style="display:none; position:absolute; inset:0; background:rgba(4,1,10,0.95); z-index:150; padding:50px;">
-    <div style="max-width:800px; margin:0 auto;">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px;">
-        <div style="font-size:32px; font-weight:900; color:#00ffcc; text-shadow:0 0 30px #00ffcc;">🎨 SHIP SKINS</div>
-        <button onclick="toggleSkinSelector()" style="padding:10px 20px; background:rgba(255,45,120,0.2); border:2px solid #ff2d78; color:#ff2d78; font-family:Orbitron; font-weight:700; cursor:pointer;">CLOSE</button>
-      </div>
-      <div id="skins-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:15px;"></div>
-    </div>
   </div>
   
   <!-- Connection Status -->
@@ -410,318 +343,6 @@ const playerTrails = new Map();
 let screenShake = 0;
 let chromatic = 0;
 let hueShift = 0;
-
-// ADDICTION SYSTEMS
-// Account progression
-let accountData = {
-  level: 1,
-  xp: 0,
-  totalKills: 0,
-  totalDeaths: 0,
-  bestStreak: 0,
-  gamesPlayed: 0
-};
-
-// Sound system
-let audioContext = null;
-let soundEnabled = true;
-
-// Daily missions
-let dailyMissions = [];
-let missionProgress = {};
-
-// Skins system
-let availableSkins = [
-  { id: 'default', name: 'Default', color: '#00ffcc', unlockLevel: 1 },
-  { id: 'fire', name: 'Fire Trail', color: '#ff6600', unlockLevel: 3 },
-  { id: 'ice', name: 'Ice Crystal', color: '#00ccff', unlockLevel: 5 },
-  { id: 'void', name: 'Void Shadow', color: '#aa00ff', unlockLevel: 8 },
-  { id: 'rainbow', name: 'Rainbow', color: 'rainbow', unlockLevel: 10 },
-  { id: 'pink', name: 'Neon Pink', color: '#ff00aa', unlockLevel: 15 },
-  { id: 'gold', name: 'Gold Rush', color: '#ffaa00', unlockLevel: 20 },
-  { id: 'toxic', name: 'Toxic Green', color: '#66ff00', unlockLevel: 25 },
-  { id: 'space', name: 'Deep Space', color: '#0044aa', unlockLevel: 30 },
-  { id: 'plasma', name: 'Plasma', color: '#00aaff', unlockLevel: 40 },
-  { id: 'legendary', name: 'Legendary', color: 'gradient', unlockLevel: 50 }
-];
-let equippedSkin = 'default';
-let sessionStats = {
-  kills: 0,
-  deaths: 0,
-  powerupsCollected: 0,
-  survivalTime: 0,
-  maxStreak: 0
-};
-
-// ═══════════════════════════════════════════
-//  ADDICTION SYSTEMS
-// ═══════════════════════════════════════════
-
-// Account System - localStorage
-function loadAccountData() {
-  const saved = localStorage.getItem('neonAccountData');
-  if (saved) {
-    accountData = JSON.parse(saved);
-  }
-  updateAccountDisplay();
-}
-
-function saveAccountData() {
-  localStorage.setItem('neonAccountData', JSON.stringify(accountData));
-}
-
-function addAccountXP(amount) {
-  accountData.xp += amount;
-  const xpNeeded = accountData.level * 1000;
-  
-  while (accountData.xp >= xpNeeded) {
-    accountData.xp -= xpNeeded;
-    accountData.level++;
-    playSound('levelup');
-    showLevelUpNotification();
-  }
-  
-  updateAccountDisplay();
-  saveAccountData();
-}
-
-function updateAccountDisplay() {
-  const xpNeeded = accountData.level * 1000;
-  const xpPct = (accountData.xp / xpNeeded) * 100;
-  
-  document.getElementById('account-level-num').textContent = accountData.level;
-  document.getElementById('account-xp-fill').style.width = xpPct + '%';
-  document.getElementById('account-xp-text').textContent = `${accountData.xp} / ${xpNeeded} XP`;
-}
-
-function showLevelUpNotification() {
-  const notif = document.createElement('div');
-  notif.style.cssText = 'position:absolute; top:20%; left:50%; transform:translate(-50%,-50%); font-size:48px; font-weight:900; color:#00ffcc; text-shadow:0 0 40px #00ffcc; z-index:200; animation:levelUpAnim 2s ease forwards;';
-  notif.textContent = `LEVEL ${accountData.level}!`;
-  document.body.appendChild(notif);
-  setTimeout(() => notif.remove(), 2000);
-  
-  // Check for new skin unlocks
-  checkSkinUnlocks();
-}
-
-// Sound System
-function initSoundSystem() {
-  try {
-    audioContext = new (window.AudioContext || window.webkitAudioContext)();
-  } catch (e) {
-    console.log('Web Audio API not supported');
-    soundEnabled = false;
-  }
-}
-
-function playSound(type) {
-  if (!soundEnabled || !audioContext) return;
-  
-  const ctx = audioContext;
-  const now = ctx.currentTime;
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-  
-  osc.connect(gain);
-  gain.connect(ctx.destination);
-  
-  switch(type) {
-    case 'shoot':
-      osc.frequency.value = 440;
-      osc.type = 'square';
-      gain.gain.setValueAtTime(0.1, now);
-      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
-      osc.start(now);
-      osc.stop(now + 0.1);
-      break;
-      
-    case 'kill':
-      osc.frequency.value = 100;
-      osc.type = 'sawtooth';
-      gain.gain.setValueAtTime(0.3, now);
-      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
-      osc.start(now);
-      osc.stop(now + 0.3);
-      break;
-      
-    case 'death':
-      osc.frequency.setValueAtTime(300, now);
-      osc.frequency.exponentialRampToValueAtTime(100, now + 0.5);
-      osc.type = 'sine';
-      gain.gain.setValueAtTime(0.2, now);
-      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
-      osc.start(now);
-      osc.stop(now + 0.5);
-      break;
-      
-    case 'powerup':
-      osc.frequency.setValueAtTime(800, now);
-      osc.frequency.exponentialRampToValueAtTime(1200, now + 0.1);
-      osc.type = 'sine';
-      gain.gain.setValueAtTime(0.15, now);
-      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
-      osc.start(now);
-      osc.stop(now + 0.2);
-      break;
-      
-    case 'levelup':
-      osc.frequency.setValueAtTime(523, now);
-      osc.frequency.setValueAtTime(659, now + 0.1);
-      osc.frequency.setValueAtTime(784, now + 0.2);
-      osc.type = 'sine';
-      gain.gain.setValueAtTime(0.2, now);
-      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
-      osc.start(now);
-      osc.stop(now + 0.4);
-      break;
-      
-    case 'streak':
-      osc.frequency.setValueAtTime(400, now);
-      osc.frequency.exponentialRampToValueAtTime(800, now + 0.3);
-      osc.type = 'sawtooth';
-      gain.gain.setValueAtTime(0.25, now);
-      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
-      osc.start(now);
-      osc.stop(now + 0.5);
-      break;
-  }
-}
-
-// Daily Missions System
-function initDailyMissions() {
-  const saved = localStorage.getItem('neonDailyMissions');
-  const today = new Date().toDateString();
-  
-  if (saved) {
-    const data = JSON.parse(saved);
-    if (data.date === today) {
-      dailyMissions = data.missions;
-      missionProgress = data.progress || {};
-      updateMissionsDisplay();
-      return;
-    }
-  }
-  
-  // Generate new missions
-  dailyMissions = [
-    { id: 'm1', type: 'kills', target: 10, reward: 500, title: 'Get 10 Kills' },
-    { id: 'm2', type: 'powerups', target: 20, reward: 300, title: 'Collect 20 Powerups' },
-    { id: 'm3', type: 'survival', target: 300, reward: 400, title: 'Survive 5 Minutes' },
-    { id: 'm4', type: 'streak', target: 3, reward: 600, title: 'Get a 3 Kill Streak' }
-  ];
-  
-  missionProgress = { m1: 0, m2: 0, m3: 0, m4: 0 };
-  saveDailyMissions();
-  updateMissionsDisplay();
-}
-
-function saveDailyMissions() {
-  localStorage.setItem('neonDailyMissions', JSON.stringify({
-    date: new Date().toDateString(),
-    missions: dailyMissions,
-    progress: missionProgress
-  }));
-}
-
-function updateMissionProgress(type, value) {
-  dailyMissions.forEach(mission => {
-    if (mission.type === type) {
-      const oldProgress = missionProgress[mission.id];
-      missionProgress[mission.id] = Math.min(mission.target, missionProgress[mission.id] + value);
-      
-      // Check if just completed
-      if (oldProgress < mission.target && missionProgress[mission.id] >= mission.target) {
-        addAccountXP(mission.reward);
-        showMissionComplete(mission);
-      }
-    }
-  });
-  
-  updateMissionsDisplay();
-  saveDailyMissions();
-}
-
-function updateMissionsDisplay() {
-  const html = dailyMissions.map(m => {
-    const progress = missionProgress[m.id] || 0;
-    const pct = (progress / m.target) * 100;
-    const complete = progress >= m.target;
-    
-    return `<div style="margin-bottom:10px; padding:8px; background:rgba(0,255,204,0.05); border-radius:3px;">
-      <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
-        <span style="font-size:11px; color:${complete?'#00ff88':'#00ffcc'};">${complete?'✓':''} ${m.title}</span>
-        <span style="font-size:10px; color:rgba(0,255,204,0.6);">+${m.reward} XP</span>
-      </div>
-      <div style="width:100%; height:4px; background:rgba(0,255,204,0.2); border-radius:2px; overflow:hidden;">
-        <div style="width:${pct}%; height:100%; background:${complete?'#00ff88':'#00ffcc'}; transition:width 0.3s;"></div>
-      </div>
-      <div style="font-size:9px; color:rgba(0,255,204,0.5); margin-top:3px;">${progress} / ${m.target}</div>
-    </div>`;
-  }).join('');
-  
-  document.getElementById('missions-list').innerHTML = html;
-}
-
-function showMissionComplete(mission) {
-  const notif = document.createElement('div');
-  notif.style.cssText = 'position:absolute; top:40%; left:50%; transform:translate(-50%,-50%); background:rgba(0,255,136,0.2); border:2px solid #00ff88; padding:20px 40px; border-radius:5px; z-index:200; animation:missionComplete 2s ease forwards;';
-  notif.innerHTML = `
-    <div style="font-size:24px; font-weight:900; color:#00ff88; text-shadow:0 0 20px #00ff88; margin-bottom:10px;">MISSION COMPLETE!</div>
-    <div style="font-size:14px; color:#00ffcc;">${mission.title}</div>
-    <div style="font-size:18px; color:#00ff88; margin-top:10px;">+${mission.reward} XP</div>
-  `;
-  document.body.appendChild(notif);
-  playSound('levelup');
-  setTimeout(() => notif.remove(), 2000);
-}
-
-// Skins System
-function loadSkins() {
-  const saved = localStorage.getItem('neonEquippedSkin');
-  if (saved) {
-    equippedSkin = saved;
-  }
-  updateSkinsGrid();
-}
-
-function checkSkinUnlocks() {
-  updateSkinsGrid();
-}
-
-function equipSkin(skinId) {
-  equippedSkin = skinId;
-  localStorage.setItem('neonEquippedSkin', skinId);
-  updateSkinsGrid();
-}
-
-function updateSkinsGrid() {
-  const html = availableSkins.map(skin => {
-    const unlocked = accountData.level >= skin.unlockLevel;
-    const equipped = skin.id === equippedSkin;
-    
-    return `<div style="padding:15px; background:rgba(${equipped?'0,255,204':'255,255,255'},0.1); border:2px solid ${equipped?'#00ffcc':unlocked?'rgba(0,255,204,0.3)':'rgba(255,255,255,0.1)'}; border-radius:5px; text-align:center; cursor:${unlocked?'pointer':'not-allowed'}; transition:all 0.2s;" onclick="${unlocked?`equipSkin('${skin.id}')`:''}" ${unlocked?`onmouseover="this.style.borderColor='#00ffcc'" onmouseout="this.style.borderColor='${equipped?'#00ffcc':'rgba(0,255,204,0.3)}'"`:''}">
-      <div style="width:60px; height:60px; margin:0 auto 10px; background:${skin.color==='rainbow'?'linear-gradient(45deg, red, yellow, lime, cyan, blue, magenta)':skin.color==='gradient'?'linear-gradient(45deg, #00ffcc, #ff00aa, #ffaa00)':skin.color}; border-radius:50%; ${unlocked?'':'filter:grayscale(100%); opacity:0.3;'}"></div>
-      <div style="font-size:12px; color:${unlocked?'#00ffcc':'rgba(255,255,255,0.3)'}; font-weight:700; margin-bottom:5px;">${skin.name}</div>
-      <div style="font-size:9px; color:rgba(0,255,204,0.5);">${unlocked?equipped?'EQUIPPED':'UNLOCKED':`Level ${skin.unlockLevel}`}</div>
-    </div>`;
-  }).join('');
-  
-  document.getElementById('skins-grid').innerHTML = html;
-}
-
-function toggleSkinSelector() {
-  const modal = document.getElementById('skin-modal');
-  modal.style.display = modal.style.display === 'none' ? 'flex' : 'none';
-}
-
-// Initialize on load
-window.addEventListener('load', () => {
-  initSoundSystem();
-  loadAccountData();
-  initDailyMissions();
-  loadSkins();
-});
 
 // Initialize background
 for (let i = 0; i < 200; i++) {
@@ -835,24 +456,6 @@ function connectToServer(playerName) {
       document.getElementById('armor-display').textContent = me.armor || 0;
       document.getElementById('multishot-display').textContent = me.multishot || 1;
       
-      // Kill streak display
-      const killStreak = me.killStreak || 0;
-      const streakHud = document.getElementById('killstreak-hud');
-      if (killStreak >= 3) {
-        streakHud.style.display = 'block';
-        document.getElementById('killstreak-display').textContent = killStreak;
-      } else {
-        streakHud.style.display = 'none';
-      }
-      
-      // Track survival time for missions
-      if (me.alive) {
-        sessionStats.survivalTime++;
-        if (sessionStats.survivalTime % 60 === 0) { // Every second
-          updateMissionProgress('survival', 1);
-        }
-      }
-      
       // Update health bar
       const healthPct = (me.health / me.maxHealth) * 100;
       document.getElementById('health-bar-fill').style.width = healthPct + '%';
@@ -880,35 +483,9 @@ function connectToServer(playerName) {
   socket.on('player_killed', (data) => {
     addKillMessage(data);
     
-    // Check if we got the kill
-    if (data.killerId === myPlayerId) {
-      playSound('kill');
-      sessionStats.kills++;
-      sessionStats.maxStreak = Math.max(sessionStats.maxStreak, data.killStreak || 0);
-      updateMissionProgress('kills', 1);
-      addAccountXP(100);
-      
-      // Update kill streak mission
-      if (data.killStreak >= 3) {
-        updateMissionProgress('streak', 1);
-      }
-    }
-    
     // Check if we died
     if (data.killedId === myPlayerId) {
-      playSound('death');
-      sessionStats.deaths++;
       showDeathScreen(data.killerName);
-    }
-  });
-  
-  socket.on('kill_streak', (data) => {
-    showKillStreakAnnouncement(data);
-  });
-  
-  socket.on('nuke_explosion', (data) => {
-    if (data.playerId === myPlayerId) {
-      showNukeAnnouncement(data.kills);
     }
   });
   
@@ -917,10 +494,6 @@ function connectToServer(playerName) {
   });
   
   socket.on('powerup_collected', (data) => {
-    playSound('powerup');
-    sessionStats.powerupsCollected++;
-    updateMissionProgress('powerups', 1);
-    
     // Show notification
     const powerupNames = {
       'health_small': '+20 HEALTH',
@@ -1019,12 +592,6 @@ setInterval(() => {
     
     if (shooting) {
       socket.emit('shoot', { angle });
-      
-      // Play shoot sound (throttled to avoid spam)
-      if (!window.lastShootSound || Date.now() - window.lastShootSound > 100) {
-        playSound('shoot');
-        window.lastShootSound = Date.now();
-      }
       
       // Create muzzle flash particles
       const shipSize = 20 + me.powerLevel * 2;
@@ -1417,79 +984,9 @@ function showDeathScreen(killerName) {
   const me = players.get(myPlayerId);
   if (!me) return;
   
-  // Calculate XP earned this session
-  const sessionXP = sessionStats.kills * 100 + Math.floor(sessionStats.survivalTime / 60) * 10;
-  addAccountXP(sessionXP);
-  
-  // Update account stats
-  accountData.totalKills += sessionStats.kills;
-  accountData.totalDeaths++;
-  accountData.bestStreak = Math.max(accountData.bestStreak, sessionStats.maxStreak);
-  accountData.gamesPlayed++;
-  saveAccountData();
-  
-  // Build enhanced death screen
-  const nextUnlock = availableSkins.find(s => s.unlockLevel > accountData.level);
-  const deathHTML = `
-    <div style="color:#ff2d78; margin-bottom:20px;">
-      <div style="font-size:18px; margin-bottom:10px;">Eliminated by ${killerName}</div>
-      <div style="font-size:14px; opacity:0.8;">Score: ${me.score} • Kills: ${sessionStats.kills} • Max Streak: ${sessionStats.maxStreak}</div>
-    </div>
-    <div style="background:rgba(0,255,204,0.1); padding:15px; border-radius:5px; margin-bottom:15px;">
-      <div style="font-size:12px; color:rgba(0,255,204,0.6); margin-bottom:10px;">SESSION REWARDS</div>
-      <div style="font-size:16px; color:#00ffcc; margin-bottom:5px;">+${sessionXP} XP</div>
-      <div style="font-size:11px; color:rgba(0,255,204,0.7);">Account Level ${accountData.level} • ${accountData.xp}/${accountData.level * 1000} XP</div>
-    </div>
-    ${nextUnlock ? `<div style="font-size:11px; color:#ffaa00; margin-bottom:15px;">
-      ✨ Next unlock: ${nextUnlock.name} at Level ${nextUnlock.unlockLevel}
-    </div>` : ''}
-    <div style="font-size:10px; color:rgba(255,45,120,0.6);">Total Games: ${accountData.gamesPlayed} • Best Streak: ${accountData.bestStreak}</div>
-  `;
-  
-  document.getElementById('death-stats-text').innerHTML = deathHTML;
+  document.getElementById('death-stats-text').textContent = 
+    `Eliminated by ${killerName} // Score: ${me.score} // Kills: ${me.kills}`;
   document.getElementById('death-screen').classList.add('show');
-  
-  // Reset session stats
-  sessionStats = { kills: 0, deaths: 0, powerupsCollected: 0, survivalTime: 0, maxStreak: 0 };
-}
-
-function showKillStreakAnnouncement(data) {
-  const streakEl = document.getElementById('kill-streak-announcement');
-  const titleEl = document.getElementById('streak-title');
-  const subtitleEl = document.getElementById('streak-subtitle');
-  
-  const colors = {
-    3: '#ff6600',
-    5: '#ffaa00',
-    7: '#ff00aa',
-    10: '#ff0066'
-  };
-  
-  const color = colors[data.streak] || '#ff6600';
-  
-  titleEl.textContent = data.title;
-  titleEl.style.color = color;
-  subtitleEl.textContent = data.playerName;
-  subtitleEl.style.color = color;
-  
-  streakEl.style.display = 'block';
-  playSound('streak');
-  
-  setTimeout(() => {
-    streakEl.style.display = 'none';
-  }, 2000);
-}
-
-function showNukeAnnouncement(kills) {
-  const notif = document.createElement('div');
-  notif.style.cssText = 'position:absolute; top:35%; left:50%; transform:translate(-50%,-50%); z-index:200; text-align:center; animation:nukeBlast 1.5s ease forwards;';
-  notif.innerHTML = `
-    <div style="font-size:72px; font-weight:900; color:#ff0000; text-shadow:0 0 80px #ff0000; margin-bottom:15px;">💥 NUKE!</div>
-    <div style="font-size:32px; color:#ffaa00; text-shadow:0 0 40px #ffaa00;">${kills} KILLS!</div>
-  `;
-  document.body.appendChild(notif);
-  playSound('streak');
-  setTimeout(() => notif.remove(), 1500);
 }
 
 document.getElementById('respawn-btn').addEventListener('click', () => {

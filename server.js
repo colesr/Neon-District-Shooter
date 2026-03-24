@@ -28,8 +28,7 @@ let powerupIdCounter = 0;
 // Config
 const WORLD_SIZE = 10000; // Large battlefield
 const TICK_RATE = 60;
-const POWERUP_SPAWN_INTERVAL = 1000; // 1 second (was 5 seconds)
-const MAX_POWERUPS = 50; // Much more items on field (was 10)
+const POWERUP_SPAWN_INTERVAL = 5000; // 5 seconds
 
 // Player class
 class Player {
@@ -50,92 +49,27 @@ class Player {
     this.lastShot = 0;
     this.powerLevel = 1; // Grows with kills
     this.alive = true;
-    
-    // New stats
-    this.damage = 20;
-    this.shield = 0; // Absorbs damage before health
-    this.armor = 0; // Reduces damage taken
-    this.xp = 0;
-    this.multishot = 1; // Number of bullets per shot
-    this.invincible = 0; // Frames of invincibility
-    this.megaDamage = 0; // Frames of mega damage
-    
-    // Kill streak system
-    this.killStreak = 0;
-    this.killStreakBonuses = {
-      speed: 0,
-      damage: 0,
-      fireRate: 0
-    };
   }
 
   update(dt) {
     if (!this.alive) return;
     
-    // Apply velocity with kill streak speed bonus
-    const speedMultiplier = 1 + this.killStreakBonuses.speed;
-    this.x += this.vx * dt * this.speed * speedMultiplier;
-    this.y += this.vy * dt * this.speed * speedMultiplier;
+    // Apply velocity
+    this.x += this.vx * dt * this.speed;
+    this.y += this.vy * dt * this.speed;
     
     // Keep in bounds
     const margin = WORLD_SIZE / 2;
     this.x = Math.max(-margin, Math.min(margin, this.x));
     this.y = Math.max(-margin, Math.min(margin, this.y));
-    
-    // Decay temporary effects
-    if (this.invincible > 0) this.invincible--;
-    if (this.megaDamage > 0) this.megaDamage--;
-  }
-
-  addKill() {
-    this.kills++;
-    this.killStreak++;
-    
-    // Apply kill streak bonuses
-    if (this.killStreak >= 3) {
-      this.killStreakBonuses.speed = 0.2; // 20% speed boost
-    }
-    if (this.killStreak >= 5) {
-      this.killStreakBonuses.damage = 10; // +10 damage
-    }
-    if (this.killStreak >= 7) {
-      this.invincible = 180; // 3 seconds invincibility
-    }
-    if (this.killStreak >= 10) {
-      // LEGENDARY - mega rewards
-      this.maxHealth += 50;
-      this.health = this.maxHealth;
-      this.multishot = Math.max(this.multishot, 5);
-      this.megaDamage = 600; // 10 seconds
-    }
-  }
-
-  die() {
-    this.alive = false;
-    // Reset kill streak bonuses
-    this.killStreak = 0;
-    this.killStreakBonuses = { speed: 0, damage: 0, fireRate: 0 };
   }
 
   takeDamage(damage, killerId) {
-    if (!this.alive || this.invincible > 0) return false;
+    if (!this.alive) return false;
     
-    // Apply armor reduction
-    const reducedDamage = Math.max(1, damage - this.armor);
-    
-    // Shield absorbs first
-    if (this.shield > 0) {
-      this.shield -= reducedDamage;
-      if (this.shield < 0) {
-        this.health += this.shield; // Overflow to health
-        this.shield = 0;
-      }
-    } else {
-      this.health -= reducedDamage;
-    }
-    
+    this.health -= damage;
     if (this.health <= 0) {
-      this.die();
+      this.alive = false;
       return killerId; // Return killer ID
     }
     return null;
@@ -148,10 +82,6 @@ class Player {
     this.alive = true;
     this.vx = 0;
     this.vy = 0;
-    this.shield = 0;
-    this.invincible = 180; // 3 seconds spawn protection
-    this.killStreak = 0;
-    this.killStreakBonuses = { speed: 0, damage: 0, fireRate: 0 };
   }
 
   powerUp() {
@@ -160,69 +90,6 @@ class Player {
     this.health = this.maxHealth;
     this.speed = Math.min(8, 5 + this.powerLevel * 0.2);
     this.fireRate = Math.max(100, 200 - this.powerLevel * 5);
-    this.damage = Math.min(50, 20 + this.powerLevel * 2);
-  }
-  
-  applyPowerup(type, value) {
-    switch(type) {
-      case 'health_small':
-      case 'health_medium':
-      case 'health_large':
-        this.health = Math.min(this.maxHealth, this.health + value);
-        break;
-      case 'energy':
-        this.xp += value;
-        if (this.xp >= 100) {
-          this.xp -= 100;
-          this.powerUp();
-        }
-        break;
-      case 'shield':
-        this.shield += value;
-        break;
-      case 'speed':
-        this.speed += value;
-        break;
-      case 'firerate':
-        this.fireRate = Math.max(50, this.fireRate - value);
-        break;
-      case 'damage':
-        this.damage += value;
-        break;
-      case 'multishot':
-        this.multishot = Math.min(5, this.multishot + 1);
-        break;
-      case 'maxhealth':
-        this.maxHealth += value;
-        this.health += value;
-        break;
-      case 'triple_shot':
-        this.multishot = Math.max(this.multishot, 3);
-        break;
-      case 'rapid_fire':
-        this.fireRate = Math.max(50, this.fireRate * 0.5);
-        break;
-      case 'armor':
-        this.armor += value;
-        break;
-      case 'invincibility':
-        this.invincible = value; // frames
-        break;
-      case 'mega_damage':
-        this.megaDamage = 600; // 10 seconds
-        this.damage *= 3;
-        break;
-      case 'nuke':
-        // Handled in game loop
-        break;
-    }
-  }
-
-  getCurrentDamage() {
-    let baseDamage = this.damage;
-    baseDamage += this.killStreakBonuses.damage;
-    if (this.megaDamage > 0) baseDamage *= 3;
-    return baseDamage;
   }
 
   serialize() {
@@ -237,14 +104,7 @@ class Player {
       health: this.health,
       maxHealth: this.maxHealth,
       powerLevel: this.powerLevel,
-      alive: this.alive,
-      shield: this.shield,
-      armor: this.armor,
-      xp: this.xp,
-      multishot: this.multishot,
-      invincible: this.invincible,
-      megaDamage: this.megaDamage,
-      killStreak: this.killStreak
+      alive: this.alive
     };
   }
 }
@@ -289,38 +149,7 @@ class Powerup {
     this.id = id;
     this.x = x;
     this.y = y;
-    this.type = type;
-    this.value = this.getValueForType(type);
-  }
-
-  getValueForType(type) {
-    const values = {
-      // Common (60% chance)
-      'health_small': 20,
-      'health_medium': 40,
-      'energy': 1,
-      'shield': 25,
-      'xp': 50,
-      
-      // Uncommon (30% chance)
-      'health_large': 75,
-      'speed': 0.3,
-      'firerate': 10,
-      'damage': 5,
-      'multishot': 1,
-      
-      // Rare (8% chance)
-      'maxhealth': 20,
-      'triple_shot': 1,
-      'rapid_fire': 1,
-      'armor': 15,
-      
-      // Epic (2% chance)
-      'invincibility': 300,
-      'mega_damage': 1,
-      'nuke': 1
-    };
-    return values[type] || 1;
+    this.type = type; // 'health', 'speed', 'damage'
   }
 
   serialize() {
@@ -328,36 +157,15 @@ class Powerup {
       id: this.id,
       x: this.x,
       y: this.y,
-      type: this.type,
-      value: this.value
+      type: this.type
     };
   }
 }
 
-// Spawn powerup with rarity system
+// Spawn powerup
 function spawnPowerup() {
-  const rand = Math.random();
-  let type;
-  
-  // Rarity tiers
-  if (rand < 0.60) {
-    // Common (60%)
-    const common = ['health_small', 'health_medium', 'energy', 'shield', 'xp'];
-    type = common[Math.floor(Math.random() * common.length)];
-  } else if (rand < 0.90) {
-    // Uncommon (30%)
-    const uncommon = ['health_large', 'speed', 'firerate', 'damage', 'multishot'];
-    type = uncommon[Math.floor(Math.random() * uncommon.length)];
-  } else if (rand < 0.98) {
-    // Rare (8%)
-    const rare = ['maxhealth', 'triple_shot', 'rapid_fire', 'armor'];
-    type = rare[Math.floor(Math.random() * rare.length)];
-  } else {
-    // Epic (2%)
-    const epic = ['invincibility', 'mega_damage', 'nuke'];
-    type = epic[Math.floor(Math.random() * epic.length)];
-  }
-  
+  const types = ['health', 'speed', 'damage'];
+  const type = types[Math.floor(Math.random() * types.length)];
   const x = Math.random() * WORLD_SIZE - WORLD_SIZE/2;
   const y = Math.random() * WORLD_SIZE - WORLD_SIZE/2;
   const powerup = new Powerup(powerupIdCounter++, x, y, type);
@@ -399,26 +207,14 @@ setInterval(() => {
           const killer = players.get(killerId);
           if (killer) {
             killer.score += 100;
-            killer.addKill();  // Use new addKill method (handles kill streaks)
+            killer.kills++;
             killer.powerUp();
             
             io.emit('player_killed', {
               killedId: player.id,
               killerId: killerId,
-              killerName: killer.name,
-              killStreak: killer.killStreak
+              killerName: killer.name
             });
-            
-            // Announce kill streaks
-            if (killer.killStreak === 3) {
-              io.emit('kill_streak', { playerId: killerId, playerName: killer.name, streak: 3, title: 'ON FIRE!' });
-            } else if (killer.killStreak === 5) {
-              io.emit('kill_streak', { playerId: killerId, playerName: killer.name, streak: 5, title: 'UNSTOPPABLE!' });
-            } else if (killer.killStreak === 7) {
-              io.emit('kill_streak', { playerId: killerId, playerName: killer.name, streak: 7, title: 'GODLIKE!' });
-            } else if (killer.killStreak === 10) {
-              io.emit('kill_streak', { playerId: killerId, playerName: killer.name, streak: 10, title: 'LEGENDARY!' });
-            }
           }
         }
       }
@@ -436,37 +232,14 @@ setInterval(() => {
       
       if (dist < 40) {
         // Collect powerup
-        player.applyPowerup(powerup.type, powerup.value);
-        
-        // Special: Nuke kills all nearby players
-        if (powerup.type === 'nuke') {
-          let nukeKills = 0;
-          players.forEach(otherPlayer => {
-            if (otherPlayer.id === player.id || !otherPlayer.alive) return;
-            const ndx = player.x - otherPlayer.x;
-            const ndy = player.y - otherPlayer.y;
-            const ndist = Math.sqrt(ndx*ndx + ndy*ndy);
-            if (ndist < 500) { // Nuke radius
-              const killed = otherPlayer.takeDamage(999, player.id);
-              if (killed) {
-                player.score += 100;
-                player.addKill();
-                player.powerUp();
-                nukeKills++;
-              }
-            }
-          });
-          if (nukeKills > 0) {
-            io.emit('nuke_explosion', { playerId: player.id, playerName: player.name, kills: nukeKills });
-          }
+        if (powerup.type === 'health') {
+          player.health = Math.min(player.maxHealth, player.health + 30);
+        } else if (powerup.type === 'speed') {
+          player.speed += 0.5;
         }
-        
         powerups.delete(id);
         
-        io.to(player.id).emit('powerup_collected', {
-          type: powerup.type,
-          value: powerup.value
-        });
+        io.to(player.id).emit('powerup_collected', powerup.type);
       }
     });
   });
@@ -482,12 +255,8 @@ setInterval(() => {
 
 // Spawn powerups periodically
 setInterval(() => {
-  if (powerups.size < MAX_POWERUPS) {
-    // Spawn 2-4 powerups at once for abundance
-    const spawnCount = Math.floor(Math.random() * 3) + 2;
-    for (let i = 0; i < spawnCount && powerups.size < MAX_POWERUPS; i++) {
-      spawnPowerup();
-    }
+  if (powerups.size < 10) {
+    spawnPowerup();
   }
 }, POWERUP_SPAWN_INTERVAL);
 
@@ -534,42 +303,19 @@ io.on('connection', (socket) => {
     
     player.lastShot = now;
 
-    // Create bullets based on multishot
+    // Create bullet
     const speed = 20;
     const angle = data.angle;
-    const damage = player.getCurrentDamage(); // Includes kill streak bonuses
+    const bullet = new Bullet(
+      bulletIdCounter++,
+      socket.id,
+      player.x,
+      player.y,
+      Math.cos(angle) * speed,
+      Math.sin(angle) * speed
+    );
     
-    if (player.multishot === 1) {
-      // Single shot
-      const bullet = new Bullet(
-        bulletIdCounter++,
-        socket.id,
-        player.x,
-        player.y,
-        Math.cos(angle) * speed,
-        Math.sin(angle) * speed
-      );
-      bullet.damage = damage;
-      bullets.set(bullet.id, bullet);
-    } else {
-      // Multishot spread
-      const spreadAngle = 0.15; // radians between bullets
-      const startAngle = angle - (spreadAngle * (player.multishot - 1) / 2);
-      
-      for (let i = 0; i < player.multishot; i++) {
-        const bulletAngle = startAngle + (spreadAngle * i);
-        const bullet = new Bullet(
-          bulletIdCounter++,
-          socket.id,
-          player.x,
-          player.y,
-          Math.cos(bulletAngle) * speed,
-          Math.sin(bulletAngle) * speed
-        );
-        bullet.damage = damage;
-        bullets.set(bullet.id, bullet);
-      }
-    }
+    bullets.set(bullet.id, bullet);
   });
 
   socket.on('respawn', () => {
