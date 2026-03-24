@@ -335,6 +335,37 @@ let powerups = new Map();
 let worldSize = 10000;
 let cameraX = 0, cameraY = 0;
 
+// Visual effects
+const bgStars = [];
+const nebulae = [];
+const particles = [];
+const playerTrails = new Map();
+let screenShake = 0;
+let chromatic = 0;
+let hueShift = 0;
+
+// Initialize background
+for (let i = 0; i < 200; i++) {
+  bgStars.push({
+    x: Math.random() * worldSize - worldSize/2,
+    y: Math.random() * worldSize - worldSize/2,
+    size: Math.random() * 2,
+    brightness: Math.random(),
+    twinkleSpeed: Math.random() * 0.02 + 0.01
+  });
+}
+
+for (let i = 0; i < 8; i++) {
+  nebulae.push({
+    x: Math.random() * worldSize - worldSize/2,
+    y: Math.random() * worldSize - worldSize/2,
+    radius: Math.random() * 800 + 400,
+    hue: Math.random() * 360,
+    opacity: Math.random() * 0.3 + 0.1,
+    pulseSpeed: Math.random() * 0.01 + 0.005
+  });
+}
+
 // Input
 const keys = {};
 let mouseX = W/2, mouseY = H/2;
@@ -389,6 +420,30 @@ function connectToServer(playerName) {
     
     powerups.clear();
     data.powerups.forEach(p => powerups.set(p.id, p));
+    
+    // Update player trails
+    players.forEach((p, id) => {
+      if (!p.alive) return;
+      
+      if (!playerTrails.has(id)) {
+        playerTrails.set(id, []);
+      }
+      
+      const trail = playerTrails.get(id);
+      trail.push({ x: p.x, y: p.y });
+      
+      // Keep trail length at 15 points
+      if (trail.length > 15) {
+        trail.shift();
+      }
+    });
+    
+    // Clean up trails for disconnected players
+    playerTrails.forEach((trail, id) => {
+      if (!players.has(id)) {
+        playerTrails.delete(id);
+      }
+    });
     
     // Update HUD
     const me = players.get(myPlayerId);
@@ -499,6 +554,9 @@ canvas.addEventListener('mousemove', (e) => {
 
 canvas.addEventListener('mousedown', () => {
   shooting = true;
+  // Visual feedback
+  screenShake = 3;
+  chromatic = 2;
 });
 
 canvas.addEventListener('mouseup', () => {
@@ -534,20 +592,100 @@ setInterval(() => {
     
     if (shooting) {
       socket.emit('shoot', { angle });
+      
+      // Create muzzle flash particles
+      const shipSize = 20 + me.powerLevel * 2;
+      const muzzleX = me.x + Math.cos(angle) * shipSize;
+      const muzzleY = me.y + Math.sin(angle) * shipSize;
+      
+      for (let i = 0; i < 8; i++) {
+        particles.push({
+          x: muzzleX,
+          y: muzzleY,
+          vx: Math.cos(angle) * (Math.random() * 3 + 2) + (Math.random() - 0.5) * 2,
+          vy: Math.sin(angle) * (Math.random() * 3 + 2) + (Math.random() - 0.5) * 2,
+          size: Math.random() * 3 + 1,
+          life: 20,
+          maxLife: 20,
+          color: `hsl(${(hueShift + Math.random() * 60) % 360}, 100%, ${50 + Math.random() * 30}%)`
+        });
+      }
     }
   }
 }, 1000/60); // 60fps input
 
 // Render
 function render() {
+  // Update effects
+  hueShift = (hueShift + 0.5) % 360;
+  screenShake = Math.max(0, screenShake * 0.9);
+  chromatic = Math.max(0, chromatic * 0.92);
+  
+  // Clear with dark background
   ctx.fillStyle = '#04010a';
   ctx.fillRect(0, 0, W, H);
   
-  ctx.save();
-  ctx.translate(W/2 - cameraX, H/2 - cameraY);
+  // Apply screen shake
+  const shakeX = (Math.random() - 0.5) * screenShake;
+  const shakeY = (Math.random() - 0.5) * screenShake;
   
-  // Draw grid
-  drawGrid();
+  ctx.save();
+  ctx.translate(W/2 - cameraX + shakeX, H/2 - cameraY + shakeY);
+  
+  // Draw animated nebulae (trippy clouds)
+  nebulae.forEach((n, i) => {
+    const time = Date.now() / 1000;
+    const pulse = Math.sin(time * n.pulseSpeed + i) * 0.5 + 0.5;
+    const hue = (n.hue + hueShift) % 360;
+    
+    const gradient = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, n.radius);
+    gradient.addColorStop(0, `hsla(${hue}, 80%, 60%, ${n.opacity * pulse})`);
+    gradient.addColorStop(0.5, `hsla(${hue + 40}, 70%, 50%, ${n.opacity * 0.4 * pulse})`);
+    gradient.addColorStop(1, 'transparent');
+    
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(n.x, n.y, n.radius, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  
+  // Draw animated stars
+  const time = Date.now() / 1000;
+  bgStars.forEach(star => {
+    const twinkle = Math.sin(time * star.twinkleSpeed) * 0.5 + 0.5;
+    const brightness = star.brightness * twinkle;
+    ctx.fillStyle = `rgba(255, 255, 255, ${brightness})`;
+    ctx.shadowColor = '#fff';
+    ctx.shadowBlur = star.size * 3;
+    ctx.beginPath();
+    ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  });
+  
+  // Draw trippy grid
+  drawTrippyGrid();
+  
+  // Draw particles (explosions, shell casings)
+  particles.forEach((p, i) => {
+    p.life--;
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 0.2; // Gravity
+    
+    const alpha = p.life / p.maxLife;
+    ctx.fillStyle = p.color;
+    ctx.globalAlpha = alpha;
+    ctx.shadowColor = p.color;
+    ctx.shadowBlur = 10;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1;
+    
+    if (p.life <= 0) particles.splice(i, 1);
+  });
   
   // Draw powerups
   powerups.forEach(p => {
@@ -623,16 +761,59 @@ function render() {
     ctx.shadowBlur = 0;
   });
   
-  // Draw bullets
+  // Draw bullets with trails
   bullets.forEach(b => {
-    ctx.fillStyle = '#00ffcc';
-    ctx.shadowColor = '#00ffcc';
+    const angle = Math.atan2(b.vy, b.vx);
+    const hue = (hueShift + Math.abs(b.x + b.y) * 0.1) % 360;
+    
+    // Trail
+    for (let i = 0; i < 5; i++) {
+      const trailX = b.x - Math.cos(angle) * i * 8;
+      const trailY = b.y - Math.sin(angle) * i * 8;
+      const alpha = 1 - (i / 5);
+      ctx.fillStyle = `hsla(${hue}, 100%, 70%, ${alpha * 0.6})`;
+      ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
+      ctx.shadowBlur = 20 * alpha;
+      ctx.beginPath();
+      ctx.arc(trailX, trailY, 4 - i, 0, Math.PI*2);
+      ctx.fill();
+    }
+    
+    // Main bullet
+    ctx.fillStyle = `hsl(${hue}, 100%, 70%)`;
+    ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
+    ctx.shadowBlur = 25;
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, 5, 0, Math.PI*2);
+    ctx.fill();
+    
+    // Inner glow
+    ctx.fillStyle = '#ffffff';
     ctx.shadowBlur = 15;
     ctx.beginPath();
-    ctx.arc(b.x, b.y, 4, 0, Math.PI*2);
+    ctx.arc(b.x, b.y, 2, 0, Math.PI*2);
     ctx.fill();
+    
     ctx.shadowBlur = 0;
   });
+  
+  // Draw player trails
+  playerTrails.forEach((trail, playerId) => {
+    trail.forEach((point, i) => {
+      const alpha = (i / trail.length) * 0.5;
+      const player = players.get(playerId);
+      const isMe = playerId === myPlayerId;
+      const hue = isMe ? (hueShift + 180) % 360 : (hueShift + 300) % 360;
+      
+      ctx.fillStyle = `hsla(${hue}, 100%, 60%, ${alpha})`;
+      ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
+      ctx.shadowBlur = 15 * alpha;
+      ctx.beginPath();
+      ctx.arc(point.x, point.y, (trail.length - i) / 3, 0, Math.PI*2);
+      ctx.fill();
+    });
+  });
+  ctx.shadowBlur = 0;
   
   // Draw players
   players.forEach((p, id) => {
@@ -710,32 +891,66 @@ function render() {
   
   ctx.restore();
   
+  // Chromatic aberration effect (trippy RGB split on shooting)
+  if (chromatic > 0.5) {
+    ctx.globalCompositeOperation = 'screen';
+    ctx.globalAlpha = chromatic / 10;
+    
+    // Red channel offset
+    ctx.fillStyle = '#ff0000';
+    ctx.fillRect(chromatic, 0, W, H);
+    
+    // Blue channel offset
+    ctx.fillStyle = '#0000ff';
+    ctx.fillRect(-chromatic, 0, W, H);
+    
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 1;
+  }
+  
   requestAnimationFrame(render);
 }
 
-function drawGrid() {
+function drawTrippyGrid() {
   const gridSize = 100;
   const startX = Math.floor((cameraX - W/2) / gridSize) * gridSize;
   const startY = Math.floor((cameraY - H/2) / gridSize) * gridSize;
   const endX = cameraX + W/2;
   const endY = cameraY + H/2;
   
-  ctx.strokeStyle = 'rgba(0,255,204,0.05)';
+  const time = Date.now() / 1000;
+  
   ctx.lineWidth = 1;
   
+  // Vertical lines with color cycling
   for (let x = startX; x < endX; x += gridSize) {
+    const dist = Math.abs(x - cameraX) / 1000;
+    const hue = (hueShift + dist * 60) % 360;
+    const wave = Math.sin(time + x / 100) * 0.1 + 0.15;
+    ctx.strokeStyle = `hsla(${hue}, 80%, 60%, ${wave})`;
+    ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
+    ctx.shadowBlur = 5;
     ctx.beginPath();
     ctx.moveTo(x, startY);
     ctx.lineTo(x, endY);
     ctx.stroke();
   }
   
+  // Horizontal lines with color cycling
   for (let y = startY; y < endY; y += gridSize) {
+    const dist = Math.abs(y - cameraY) / 1000;
+    const hue = (hueShift + dist * 60 + 180) % 360;
+    const wave = Math.sin(time + y / 100) * 0.1 + 0.15;
+    ctx.strokeStyle = `hsla(${hue}, 80%, 60%, ${wave})`;
+    ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
+    ctx.shadowBlur = 5;
     ctx.beginPath();
     ctx.moveTo(startX, y);
     ctx.lineTo(endX, y);
     ctx.stroke();
   }
+  
+  ctx.shadowBlur = 0;
 }
 
 function updateLeaderboard() {
