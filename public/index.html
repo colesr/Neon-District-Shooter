@@ -261,6 +261,104 @@
       border-color:#ff2d78;
       color:#ff2d78;
     }
+
+    /* Mini-Map */
+    #minimap {
+      position:absolute;
+      bottom:20px;
+      left:20px;
+      width:180px;
+      height:180px;
+      border:2px solid rgba(0,255,204,0.5);
+      border-radius:5px;
+      background:rgba(4,1,10,0.75);
+      z-index:10;
+      overflow:hidden;
+    }
+
+    /* Skin Selector */
+    .skin-selector {
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      justify-content:center;
+      margin-bottom:25px;
+      max-width:400px;
+    }
+    .skin-option {
+      width:50px;
+      height:50px;
+      border:2px solid rgba(0,255,204,0.3);
+      border-radius:5px;
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      flex-direction:column;
+      transition:all 0.2s;
+      background:rgba(4,1,10,0.6);
+      position:relative;
+    }
+    .skin-option:hover { border-color:#00ffcc; transform:scale(1.1); }
+    .skin-option.selected { border-color:#00ffcc; box-shadow:0 0 15px rgba(0,255,204,0.5); background:rgba(0,255,204,0.1); }
+    .skin-option.locked { opacity:0.35; cursor:not-allowed; }
+    .skin-option.locked:hover { transform:none; border-color:rgba(0,255,204,0.3); }
+    .skin-ship { width:20px; height:20px; }
+    .skin-label { font-size:7px; color:#00ffcc; margin-top:3px; letter-spacing:0.05em; }
+    .skin-lock { position:absolute; font-size:8px; bottom:2px; color:#ff2d78; }
+    .selector-title { font-size:11px; color:rgba(0,255,204,0.7); letter-spacing:0.15em; margin-bottom:8px; width:100%; text-align:center; }
+
+    /* Ability Selector */
+    .ability-selector {
+      display:flex;
+      gap:12px;
+      justify-content:center;
+      margin-bottom:25px;
+    }
+    .ability-option {
+      width:110px;
+      padding:10px 8px;
+      border:2px solid rgba(0,255,204,0.3);
+      border-radius:5px;
+      cursor:pointer;
+      text-align:center;
+      transition:all 0.2s;
+      background:rgba(4,1,10,0.6);
+    }
+    .ability-option:hover { border-color:#00ffcc; transform:scale(1.05); }
+    .ability-option.selected { border-color:#00ffcc; box-shadow:0 0 15px rgba(0,255,204,0.5); background:rgba(0,255,204,0.1); }
+    .ability-name { font-size:11px; color:#00ffcc; font-weight:700; }
+    .ability-desc { font-size:8px; color:rgba(0,255,204,0.5); margin-top:4px; }
+    .ability-key { font-size:8px; color:#ffaa00; margin-top:3px; }
+
+    /* Ability Cooldown HUD */
+    #ability-hud {
+      position:absolute;
+      bottom:70px;
+      left:50%;
+      transform:translateX(-50%);
+      z-index:10;
+      text-align:center;
+    }
+    #ability-hud .ability-bar-bg {
+      width:200px;
+      height:18px;
+      background:rgba(4,1,10,0.8);
+      border:1px solid #00ffcc;
+      border-radius:3px;
+      overflow:hidden;
+    }
+    #ability-hud .ability-bar-fill {
+      height:100%;
+      background:linear-gradient(90deg, #00ffcc, #00ff88);
+      transition:width 0.1s;
+    }
+    #ability-hud .ability-label {
+      font-size:10px;
+      color:#00ffcc;
+      letter-spacing:0.1em;
+      margin-bottom:3px;
+    }
   </style>
 </head>
 <body>
@@ -271,6 +369,29 @@
     <div class="join-title">NEON DISTRICT</div>
     <div class="join-subtitle">MULTIPLAYER ARENA // 2157</div>
     <input type="text" id="player-name-input" placeholder="ENTER CALLSIGN" maxlength="15" />
+
+    <div class="selector-title">SHIP SKIN</div>
+    <div class="skin-selector" id="skin-selector"></div>
+
+    <div class="selector-title">ABILITY [SPACE]</div>
+    <div class="ability-selector" id="ability-selector">
+      <div class="ability-option selected" data-ability="dash">
+        <div class="ability-name">DASH</div>
+        <div class="ability-desc">Teleport forward</div>
+        <div class="ability-key">15s cooldown</div>
+      </div>
+      <div class="ability-option" data-ability="emp">
+        <div class="ability-name">EMP</div>
+        <div class="ability-desc">Slow nearby enemies</div>
+        <div class="ability-key">20s cooldown</div>
+      </div>
+      <div class="ability-option" data-ability="cloak">
+        <div class="ability-name">CLOAK</div>
+        <div class="ability-desc">Turn invisible 5s</div>
+        <div class="ability-key">25s cooldown</div>
+      </div>
+    </div>
+
     <button id="join-btn">⚡ JOIN BATTLE</button>
   </div>
   
@@ -284,6 +405,7 @@
     <div class="hud-item">ARMOR: <span id="armor-display">0</span></div>
     <div class="hud-item">MULTISHOT: <span id="multishot-display">1</span>x</div>
     <div class="hud-item" style="border-left-color:#ffaa00;">🔫 GANG: <span id="gang-display">0</span></div>
+    <div class="hud-item" style="border-left-color:#ff6600;">WEAPON: <span id="weapon-display">Blaster</span> <span id="ammo-display"></span></div>
   </div>
   
   <!-- Health Bar -->
@@ -294,6 +416,14 @@
     <div id="health-text">100 / 100</div>
   </div>
   
+  <!-- Ability HUD -->
+  <div id="ability-hud">
+    <div class="ability-label"><span id="ability-name-display">DASH</span> [SPACE]</div>
+    <div class="ability-bar-bg">
+      <div class="ability-bar-fill" id="ability-bar-fill" style="width:100%"></div>
+    </div>
+  </div>
+
   <!-- Leaderboard -->
   <div id="leaderboard">
     <div class="lb-title">🏆 TOP PLAYERS</div>
@@ -310,6 +440,11 @@
     <button id="respawn-btn">⚡ RESPAWN</button>
   </div>
   
+  <!-- Mini-Map -->
+  <div id="minimap">
+    <canvas id="minimap-canvas" width="180" height="180"></canvas>
+  </div>
+
   <!-- Connection Status -->
   <div id="connection-status">● CONNECTED</div>
   
@@ -326,6 +461,57 @@ function resize() {
 }
 resize();
 window.addEventListener('resize', resize);
+
+// Helper: hex color to rgba
+function hexToRgba(hex, alpha) {
+  const r = parseInt(hex.slice(1,3), 16);
+  const g = parseInt(hex.slice(3,5), 16);
+  const b = parseInt(hex.slice(5,7), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+// Skin definitions (must match server)
+const SKINS = {
+  default: { name: 'Standard', color: null, kills: 0 },
+  crimson: { name: 'Crimson', color: '#ff2244', kills: 0 },
+  azure: { name: 'Azure', color: '#2288ff', kills: 0 },
+  gold: { name: 'Gold', color: '#ffaa00', kills: 10 },
+  purple: { name: 'Purple Haze', color: '#aa00ff', kills: 25 },
+  toxic: { name: 'Toxic', color: '#00ff44', kills: 50 },
+  ice: { name: 'Ice', color: '#00ccff', kills: 100 },
+  inferno: { name: 'Inferno', color: '#ff4400', kills: 200 },
+  void: { name: 'Void', color: '#8800ff', kills: 500 }
+};
+let selectedSkin = 'default';
+
+// Build skin selector UI
+(function buildSkinSelector() {
+  const container = document.getElementById('skin-selector');
+  Object.entries(SKINS).forEach(([id, skin]) => {
+    const el = document.createElement('div');
+    el.className = 'skin-option' + (id === 'default' ? ' selected' : '') + (skin.kills > 0 ? ' locked' : '');
+    el.dataset.skin = id;
+    const shipColor = skin.color || '#00ffcc';
+    el.innerHTML = `<svg class="skin-ship" viewBox="0 0 20 20"><polygon points="18,10 4,3 6,10 4,17" fill="${shipColor}" /></svg><span class="skin-label">${skin.name}</span>${skin.kills > 0 ? `<span class="skin-lock">${skin.kills}K</span>` : ''}`;
+    el.addEventListener('click', () => {
+      if (skin.kills > 0) return; // locked for now (unlocked at runtime when server sends totalKills)
+      document.querySelectorAll('.skin-option').forEach(s => s.classList.remove('selected'));
+      el.classList.add('selected');
+      selectedSkin = id;
+    });
+    container.appendChild(el);
+  });
+})();
+
+// Ability selector
+let selectedAbility = 'dash';
+document.querySelectorAll('.ability-option').forEach(el => {
+  el.addEventListener('click', () => {
+    document.querySelectorAll('.ability-option').forEach(a => a.classList.remove('selected'));
+    el.classList.add('selected');
+    selectedAbility = el.dataset.ability;
+  });
+});
 
 // Game state
 let socket = null;
@@ -396,7 +582,7 @@ function connectToServer(playerName) {
     console.log('Connected to server');
     document.getElementById('connection-status').textContent = '● CONNECTED';
     document.getElementById('connection-status').classList.remove('disconnected');
-    socket.emit('join', { name: playerName });
+    socket.emit('join', { name: playerName, skin: selectedSkin, ability: selectedAbility });
   });
   
   socket.on('disconnect', () => {
@@ -457,6 +643,39 @@ function connectToServer(playerName) {
       document.getElementById('armor-display').textContent = me.armor || 0;
       document.getElementById('multishot-display').textContent = me.multishot || 1;
       document.getElementById('gang-display').textContent = me.gang ? me.gang.length : 0;
+
+      // Update weapon display
+      const weaponNames = { default: 'Blaster', shotgun: 'Shotgun', sniper: 'Sniper', laser: 'Laser', homing: 'Homing' };
+      document.getElementById('weapon-display').textContent = weaponNames[me.weapon] || 'Blaster';
+      document.getElementById('ammo-display').textContent = me.weaponAmmo === null || me.weapon === 'default' ? '' : `[${me.weaponAmmo}]`;
+
+      // Update ability cooldown bar
+      const abilityNames = { dash: 'DASH', emp: 'EMP', cloak: 'CLOAK' };
+      const abilityCooldowns = { dash: 900, emp: 1200, cloak: 1500 };
+      const maxCd = abilityCooldowns[me.ability] || 900;
+      const cdRemaining = me.abilityCooldown || 0;
+      const cdPct = Math.max(0, 100 - (cdRemaining / maxCd) * 100);
+      document.getElementById('ability-name-display').textContent = abilityNames[me.ability] || 'DASH';
+      const abilityFill = document.getElementById('ability-bar-fill');
+      abilityFill.style.width = cdPct + '%';
+      if (cdRemaining > 0) {
+        abilityFill.style.background = 'linear-gradient(90deg, #ff2d78, #ff6600)';
+      } else if (me.abilityActive > 0) {
+        abilityFill.style.background = 'linear-gradient(90deg, #ffaa00, #ffcc00)';
+      } else {
+        abilityFill.style.background = 'linear-gradient(90deg, #00ffcc, #00ff88)';
+      }
+
+      // Unlock skins based on totalKills
+      if (me.totalKills !== undefined) {
+        document.querySelectorAll('.skin-option').forEach(el => {
+          const skinId = el.dataset.skin;
+          const skinDef = SKINS[skinId];
+          if (skinDef && me.totalKills >= skinDef.kills) {
+            el.classList.remove('locked');
+          }
+        });
+      }
       
       // Update health bar
       const healthPct = (me.health / me.maxHealth) * 100;
@@ -537,11 +756,40 @@ function connectToServer(playerName) {
       'armor': '+ARMOR',
       'invincibility': 'INVINCIBILITY!',
       'mega_damage': 'MEGA DAMAGE!',
-      'nuke': '💥 NUKE!'
+      'nuke': '💥 NUKE!',
+      'weapon_shotgun': 'SHOTGUN!',
+      'weapon_sniper': 'SNIPER RIFLE!',
+      'weapon_laser': 'LASER GUN!',
+      'weapon_homing': 'HOMING MISSILES!'
     };
     
     const name = powerupNames[data.type] || 'POWERUP';
     showPowerupNotification(name);
+  });
+
+  // Ability visual effects
+  socket.on('ability_used', (data) => {
+    if (data.ability === 'emp') {
+      // Add EMP shockwave particles
+      for (let i = 0; i < 30; i++) {
+        const a = (Math.PI * 2 / 30) * i;
+        particles.push({
+          x: data.x, y: data.y,
+          vx: Math.cos(a) * 8, vy: Math.sin(a) * 8,
+          size: 4, life: 30, maxLife: 30,
+          color: '#00ccff'
+        });
+      }
+      if (data.playerId === myPlayerId) {
+        screenShake = 8;
+        showPowerupNotification('EMP BLAST!');
+      }
+    } else if (data.ability === 'dash' && data.playerId === myPlayerId) {
+      screenShake = 5;
+      showPowerupNotification('DASH!');
+    } else if (data.ability === 'cloak' && data.playerId === myPlayerId) {
+      showPowerupNotification('CLOAKED!');
+    }
   });
 }
 
@@ -567,6 +815,11 @@ function showPowerupNotification(text) {
 // Input handling
 window.addEventListener('keydown', (e) => {
   keys[e.key.toLowerCase()] = true;
+  // Ability on Space
+  if (e.code === 'Space' && socket && myPlayerId) {
+    e.preventDefault();
+    socket.emit('use_ability');
+  }
 });
 
 window.addEventListener('keyup', (e) => {
@@ -740,7 +993,12 @@ function render() {
       // Epic (orange/red - pulsing)
       'invincibility': { color: '#ffaa00', size: 28, glow: 40 },
       'mega_damage': { color: '#ff0066', size: 28, glow: 40 },
-      'nuke': { color: '#ff0000', size: 30, glow: 50 }
+      'nuke': { color: '#ff0000', size: 30, glow: 50 },
+      // Weapon drops (rare tier)
+      'weapon_shotgun': { color: '#ff8800', size: 22, glow: 30 },
+      'weapon_sniper': { color: '#00ffcc', size: 22, glow: 30 },
+      'weapon_laser': { color: '#ff00ff', size: 22, glow: 30 },
+      'weapon_homing': { color: '#ff2244', size: 22, glow: 30 }
     };
     
     const style = powerupStyles[p.type] || { color: '#ffffff', size: 15, glow: 20 };
@@ -787,39 +1045,75 @@ function render() {
     ctx.shadowBlur = 0;
   });
   
-  // Draw bullets with trails
+  // Draw bullets with weapon-specific visuals
+  const weaponBulletStyles = {
+    default: { color: null, size: 5, trailLen: 5, glow: 25 },
+    shotgun: { color: '#ff8800', size: 4, trailLen: 3, glow: 15 },
+    sniper: { color: '#00ffcc', size: 3, trailLen: 8, glow: 35 },
+    laser: { color: '#ff00ff', size: 2, trailLen: 10, glow: 20 },
+    homing: { color: '#ff2244', size: 6, trailLen: 6, glow: 30 }
+  };
+
   bullets.forEach(b => {
     const angle = Math.atan2(b.vy, b.vx);
-    const hue = (hueShift + Math.abs(b.x + b.y) * 0.1) % 360;
-    
+    const wStyle = weaponBulletStyles[b.weapon] || weaponBulletStyles.default;
+    const hue = wStyle.color ? null : (hueShift + Math.abs(b.x + b.y) * 0.1) % 360;
+    const bulletColor = wStyle.color || `hsl(${hue}, 100%, 70%)`;
+    const bulletGlowColor = wStyle.color || `hsl(${hue}, 100%, 50%)`;
+
     // Trail
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < wStyle.trailLen; i++) {
       const trailX = b.x - Math.cos(angle) * i * 8;
       const trailY = b.y - Math.sin(angle) * i * 8;
-      const alpha = 1 - (i / 5);
-      ctx.fillStyle = `hsla(${hue}, 100%, 70%, ${alpha * 0.6})`;
-      ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
+      const alpha = 1 - (i / wStyle.trailLen);
+      ctx.fillStyle = bulletColor;
+      ctx.globalAlpha = alpha * 0.6;
+      ctx.shadowColor = bulletGlowColor;
       ctx.shadowBlur = 20 * alpha;
       ctx.beginPath();
-      ctx.arc(trailX, trailY, 4 - i, 0, Math.PI*2);
+      ctx.arc(trailX, trailY, wStyle.size - i * 0.5, 0, Math.PI*2);
       ctx.fill();
     }
-    
+    ctx.globalAlpha = 1;
+
     // Main bullet
-    ctx.fillStyle = `hsl(${hue}, 100%, 70%)`;
-    ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
-    ctx.shadowBlur = 25;
+    ctx.fillStyle = bulletColor;
+    ctx.shadowColor = bulletGlowColor;
+    ctx.shadowBlur = wStyle.glow;
     ctx.beginPath();
-    ctx.arc(b.x, b.y, 5, 0, Math.PI*2);
-    ctx.fill();
-    
+
+    // Sniper: elongated shape
+    if (b.weapon === 'sniper') {
+      ctx.save();
+      ctx.translate(b.x, b.y);
+      ctx.rotate(angle);
+      ctx.fillRect(-8, -1.5, 16, 3);
+      ctx.restore();
+    } else if (b.weapon === 'homing') {
+      // Homing: diamond shape
+      ctx.save();
+      ctx.translate(b.x, b.y);
+      ctx.rotate(angle);
+      ctx.beginPath();
+      ctx.moveTo(8, 0);
+      ctx.lineTo(0, -4);
+      ctx.lineTo(-4, 0);
+      ctx.lineTo(0, 4);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    } else {
+      ctx.arc(b.x, b.y, wStyle.size, 0, Math.PI*2);
+      ctx.fill();
+    }
+
     // Inner glow
     ctx.fillStyle = '#ffffff';
     ctx.shadowBlur = 15;
     ctx.beginPath();
-    ctx.arc(b.x, b.y, 2, 0, Math.PI*2);
+    ctx.arc(b.x, b.y, wStyle.size * 0.4, 0, Math.PI*2);
     ctx.fill();
-    
+
     ctx.shadowBlur = 0;
   });
   
@@ -844,16 +1138,22 @@ function render() {
   // Draw players
   players.forEach((p, id) => {
     if (!p.alive) return;
-    
+
+    // Cloaked players: invisible to enemies, ghost to self
+    if (p.cloaked && id !== myPlayerId) return;
+    if (p.cloaked) ctx.globalAlpha = 0.3;
+
     const isMe = id === myPlayerId;
-    let color = isMe ? '#00ffcc' : '#ff2d78';
+    // Use skin color if player has one, otherwise default
+    const skinDef = SKINS[p.skin] || SKINS.default;
+    let color = skinDef.color || (isMe ? '#00ffcc' : '#ff2d78');
     const size = 20 + p.powerLevel * 2;
-    
+
     // DRAW GANG MEMBERS FIRST (behind the leader)
     if (p.gang && p.gang.length > 0) {
       p.gang.forEach((member, i) => {
-        const gangSize = 18; // Slightly smaller than leader
-        const gangColor = isMe ? 'rgba(0,255,204,0.7)' : 'rgba(255,45,120,0.7)';
+        const gangSize = 18;
+        const gangColor = hexToRgba(color, 0.7);
         
         // Gang member ship
         ctx.save();
@@ -946,6 +1246,9 @@ function render() {
       ctx.fillStyle = '#00ccff';
       ctx.fillRect(p.x - barWidth/2, shieldBarY, barWidth * shieldPct, 3);
     }
+
+    // Reset alpha after cloaked player
+    ctx.globalAlpha = 1;
   });
   
   ctx.restore();
@@ -967,7 +1270,70 @@ function render() {
     ctx.globalAlpha = 1;
   }
   
+  // Draw mini-map
+  drawMinimap();
+
   requestAnimationFrame(render);
+}
+
+function drawMinimap() {
+  const mc = document.getElementById('minimap-canvas');
+  const mctx = mc.getContext('2d');
+  const mw = mc.width;
+  const mh = mc.height;
+  const scale = mw / worldSize;
+
+  mctx.clearRect(0, 0, mw, mh);
+
+  // Background
+  mctx.fillStyle = 'rgba(4,1,10,0.9)';
+  mctx.fillRect(0, 0, mw, mh);
+
+  // World border
+  mctx.strokeStyle = 'rgba(0,255,204,0.2)';
+  mctx.strokeRect(0, 0, mw, mh);
+
+  // Draw powerups as tiny dots
+  powerups.forEach(p => {
+    const mx = (p.x + worldSize/2) * scale;
+    const my = (p.y + worldSize/2) * scale;
+    mctx.fillStyle = 'rgba(255,255,255,0.3)';
+    mctx.fillRect(mx, my, 1, 1);
+  });
+
+  // Draw other players
+  players.forEach((p, id) => {
+    if (!p.alive || p.cloaked) return;
+    const mx = (p.x + worldSize/2) * scale;
+    const my = (p.y + worldSize/2) * scale;
+
+    if (id === myPlayerId) {
+      // Self: bright cyan dot with pulse
+      const pulse = Math.sin(Date.now() / 200) * 0.5 + 1.5;
+      mctx.fillStyle = '#00ffcc';
+      mctx.shadowColor = '#00ffcc';
+      mctx.shadowBlur = 5;
+      mctx.beginPath();
+      mctx.arc(mx, my, 3 * pulse, 0, Math.PI * 2);
+      mctx.fill();
+      mctx.shadowBlur = 0;
+
+      // View rectangle
+      const viewW = W * scale;
+      const viewH = H * scale;
+      mctx.strokeStyle = 'rgba(0,255,204,0.4)';
+      mctx.lineWidth = 1;
+      mctx.strokeRect(mx - viewW/2, my - viewH/2, viewW, viewH);
+    } else {
+      // Enemies: red dots
+      const skinDef = SKINS[p.skin] || SKINS.default;
+      const dotColor = skinDef.color || '#ff2d78';
+      mctx.fillStyle = dotColor;
+      mctx.beginPath();
+      mctx.arc(mx, my, 2, 0, Math.PI * 2);
+      mctx.fill();
+    }
+  });
 }
 
 function drawTrippyGrid() {
