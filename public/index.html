@@ -765,26 +765,30 @@ function connectToServer(playerName) {
       // Update weapon display
       const weaponNames = { default: 'Blaster', shotgun: 'Shotgun', sniper: 'Sniper', laser: 'Laser', homing: 'Homing' };
       document.getElementById('weapon-display').textContent = weaponNames[me.weapon] || 'Blaster';
-      document.getElementById('ammo-display').textContent = me.weaponAmmo === null || me.weapon === 'default' ? '' : `[${me.weaponAmmo}]`;
+      document.getElementById('ammo-display').textContent = (me.weaponAmmo < 0 || me.weapon === 'default') ? '' : `[${me.weaponAmmo}]`;
 
-      // Update weapon inventory bar
+      // Update weapon inventory bar (only rebuild DOM when weapons change, not ammo)
       const weaponBar = document.getElementById('weapon-bar');
-      const inv = (me.weaponInventory && me.weaponInventory.length > 0) ? me.weaponInventory : [{ type: 'default', ammo: Infinity }];
-      const activeIdx = me.weaponIndex || 0;
-      if (inv.length !== weaponBar.childElementCount || weaponBar.dataset.hash !== JSON.stringify(inv.map(w => w.type + w.ammo))) {
-        weaponBar.dataset.hash = JSON.stringify(inv.map(w => w.type + w.ammo));
+      const inv = (me.weaponInventory && me.weaponInventory.length > 0) ? me.weaponInventory : [{ type: 'default', ammo: -1 }];
+      const activeIdx = me.weaponIndex !== undefined ? me.weaponIndex : 0;
+      const invTypes = inv.map(w => w.type).join(',');
+      if (weaponBar.dataset.types !== invTypes) {
+        // Only rebuild DOM when weapon types change (not every ammo tick)
+        weaponBar.dataset.types = invTypes;
         weaponBar.innerHTML = inv.map((w, i) => {
           const name = weaponNames[w.type] || w.type;
-          const ammoText = w.ammo === Infinity ? '' : w.ammo;
-          const active = i === activeIdx ? ' active' : '';
-          return `<div class="weapon-slot${active}"><span class="wslot-name">${name}</span>${ammoText ? `<span class="wslot-ammo">${ammoText}</span>` : ''}</div>`;
+          return `<div class="weapon-slot${i === activeIdx ? ' active' : ''}"><span class="wslot-name">${name}</span><span class="wslot-ammo"></span></div>`;
         }).join('');
-      } else {
-        // Just update active state
-        weaponBar.querySelectorAll('.weapon-slot').forEach((el, i) => {
-          el.classList.toggle('active', i === activeIdx);
-        });
       }
+      // Update ammo text and active state without rebuilding DOM
+      const slots = weaponBar.querySelectorAll('.weapon-slot');
+      slots.forEach((el, i) => {
+        el.classList.toggle('active', i === activeIdx);
+        const ammoEl = el.querySelector('.wslot-ammo');
+        if (ammoEl && inv[i]) {
+          ammoEl.textContent = inv[i].ammo < 0 ? '' : inv[i].ammo;
+        }
+      });
 
       // Update ability cooldown bar
       const abilityNames = { dash: 'DASH', emp: 'EMP', cloak: 'CLOAK' };

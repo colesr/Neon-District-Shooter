@@ -193,7 +193,7 @@ class AIEnemy {
       score: 0, kills: 0, totalKills: 0, powerLevel: 1,
       shield: 0, armor: 0, xp: 0, multishot: 1,
       invincible: 0, megaDamage: 0, gang: [],
-      weapon: 'default', weaponAmmo: Infinity,
+      weapon: 'default', weaponAmmo: -1, weaponInventory: [], weaponIndex: 0,
       ability: 'dash', abilityCooldown: 0, abilityActive: 0,
       cloaked: false, empSlowed: 0
     };
@@ -556,8 +556,8 @@ class Player {
       // New fields
       skin: this.skin,
       weapon: this.weapon,
-      weaponAmmo: this.weaponAmmo,
-      weaponInventory: this.weaponInventory,
+      weaponAmmo: this.weaponAmmo === Infinity ? -1 : this.weaponAmmo,
+      weaponInventory: this.weaponInventory.map(w => ({ type: w.type, ammo: w.ammo === Infinity ? -1 : w.ammo })),
       weaponIndex: this.weaponIndex,
       ability: this.ability,
       abilityCooldown: this.abilityCooldown,
