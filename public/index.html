@@ -1550,12 +1550,18 @@ function drawTrippyGrid() {
   ctx.shadowBlur = 0;
 }
 
+let lastLeaderboardKey = '';
 function updateLeaderboard() {
   const sorted = Array.from(players.values())
     .filter(p => p.alive && !p.isAI)
     .sort((a, b) => b.score - a.score)
     .slice(0, 10);
-  
+
+  // Only rebuild DOM when leaderboard data actually changes
+  const lbKey = sorted.map(p => p.id + ':' + p.score).join(',');
+  if (lbKey === lastLeaderboardKey) return;
+  lastLeaderboardKey = lbKey;
+
   const html = sorted.map((p, i) => {
     const isMe = p.id === myPlayerId;
     return `<div class="lb-player${isMe?' me':''}">
@@ -1564,7 +1570,7 @@ function updateLeaderboard() {
       <span class="lb-score">${p.score}</span>
     </div>`;
   }).join('');
-  
+
   document.getElementById('leaderboard-list').innerHTML = html;
 }
 

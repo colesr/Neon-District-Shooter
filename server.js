@@ -482,6 +482,7 @@ class Player {
         this.health = Math.min(this.maxHealth, this.health + value);
         break;
       case 'energy':
+      case 'xp':
         this.xp += value;
         if (this.xp >= 100) {
           this.xp -= 100;
@@ -492,7 +493,7 @@ class Player {
         this.shield += value;
         break;
       case 'speed':
-        this.speed += value;
+        this.speed = Math.min(10, this.speed + value);
         break;
       case 'firerate':
         this.fireRate = Math.max(50, this.fireRate - value);
@@ -789,6 +790,7 @@ setInterval(() => {
               killedId: player.id,
               killerId: killerId,
               killerName: killer.name,
+              killedName: player.name,
               gangSize: killer.gang.length
             });
           }
@@ -969,8 +971,8 @@ io.on('connection', (socket) => {
   socket.on('input', (data) => {
     const player = players.get(socket.id);
     if (!player || !player.alive) return;
-    player.vx = Number(data.vx) || 0;
-    player.vy = Number(data.vy) || 0;
+    player.vx = Math.max(-1, Math.min(1, Number(data.vx) || 0));
+    player.vy = Math.max(-1, Math.min(1, Number(data.vy) || 0));
     player.angle = Number(data.angle) || 0;
   });
 
